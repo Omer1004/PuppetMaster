@@ -71,7 +71,17 @@ final class AppEnvironment {
 
     func setDuet(_ duet: Bool) {
         troupe.setDuet(duet)
+        // `Troupe` gives the new slot a stand-in so a duet is never one puppet twice.
+        // If the user has already chosen someone for that slot, their choice wins —
+        // without this, the remembered pair only came back across a relaunch.
+        if duet { restorePartnerCharacter() }
         defaults.set(duet, forKey: Key.duet)
+    }
+
+    private func restorePartnerCharacter() {
+        guard let id = defaults.string(forKey: Key.character(slot: 1)),
+              troupe.engines.indices.contains(1) else { return }
+        troupe.engines[1].send(.setCharacter(id: id))
     }
 
     var isDuet: Bool { troupe.isDuet }
@@ -104,10 +114,7 @@ final class AppEnvironment {
         // stand-in for the empty slot, and the remembered choice then replaces it.
         if defaults.bool(forKey: Key.duet) {
             troupe.setDuet(true)
-            if let id = defaults.string(forKey: Key.character(slot: 1)),
-               troupe.engines.indices.contains(1) {
-                troupe.engines[1].send(.setCharacter(id: id))
-            }
+            restorePartnerCharacter()
         }
     }
 

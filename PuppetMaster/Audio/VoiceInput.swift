@@ -138,8 +138,6 @@ final class VoiceInput {
         }
     }
 
-    func teardown() { mic.teardown() }
-
     // MARK: Presentation
 
     var talkButtonTitle: String {

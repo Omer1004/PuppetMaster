@@ -53,4 +53,26 @@ struct TapFormatCheckTests {
         #expect(!TapFormatCheck.isUsable(tapSampleRate: 48_000, tapChannels: 1,
                                          hardwareSampleRate: 48_002, hardwareChannels: 1))
     }
+
+    /// The rule `MicAmplitudeSource.handleConfigurationChange()` relies on.
+    ///
+    /// The commonest configuration change is the app's own: `start()` upgrades the
+    /// session to `.playAndRecord`, which reconfigures the hardware, which posts a
+    /// change notification on the engine that just started. The hardware format has not
+    /// actually moved, so the tap is still valid and the engine only needs restarting.
+    /// Treating that as "the world changed" rebuilt the microphone on every Talk press.
+    @Test("An unchanged hardware format means the tap survived the change")
+    func selfInflictedChangeKeepsTheTap() {
+        // What the tap was installed with, and what the hardware reports afterwards.
+        #expect(TapFormatCheck.isUsable(tapSampleRate: 48_000, tapChannels: 1,
+                                        hardwareSampleRate: 48_000, hardwareChannels: 1))
+    }
+
+    /// The other half of the same rule: a real route change — headphones with a
+    /// different clock, a call ending — must still force the rebuild.
+    @Test("A moved hardware format still forces a rebuild")
+    func realRouteChangeStillRebuilds() {
+        #expect(!TapFormatCheck.isUsable(tapSampleRate: 48_000, tapChannels: 1,
+                                         hardwareSampleRate: 16_000, hardwareChannels: 1))
+    }
 }

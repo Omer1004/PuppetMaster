@@ -20,6 +20,10 @@ final class MicAmplitudeSource {
     private var engine = AVAudioEngine()
     private let box = AmplitudeBox()
     private var isTapped = false
+    /// The format the live tap was installed with. Kept so a configuration change can
+    /// be answered with "did the hardware actually move?" rather than always assuming
+    /// the worst — see `handleConfigurationChange()`.
+    private var installedTapFormat: AVAudioFormat?
     private let log = Logger(subsystem: "com.omerwm.puppetmaster", category: "mic")
     private var observers: [any NSObjectProtocol] = []
 
@@ -141,6 +145,7 @@ final class MicAmplitudeSource {
             box.store(pow(normalised, 0.75))
         }
         isTapped = true
+        installedTapFormat = tapFormat
 
         engine.prepare()
         try engine.start()
@@ -172,13 +177,7 @@ final class MicAmplitudeSource {
         guard isTapped else { return }
         engine.inputNode.removeTap(onBus: 0)
         isTapped = false
-    }
-
-    /// Tear everything down. Only on app teardown.
-    func teardown() {
-        for observer in observers { NotificationCenter.default.removeObserver(observer) }
-        observers.removeAll()
-        unwind()
+        installedTapFormat = nil
     }
 
     /// Most recent loudness, 0…1. Read once per frame from the main thread.
@@ -196,7 +195,7 @@ final class MicAmplitudeSource {
         observers.append(centre.addObserver(
             forName: .AVAudioEngineConfigurationChange,
             object: engine, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.onNeedsRestart?() }
+                MainActor.assumeIsolated { self?.handleConfigurationChange() }
             })
 
         observers.append(centre.addObserver(
@@ -216,6 +215,46 @@ final class MicAmplitudeSource {
                 // leave a dead engine looking alive.
                 MainActor.assumeIsolated { self?.onInterrupted?() }
             })
+    }
+
+    /// Not every configuration change deserves a rebuild.
+    ///
+    /// The single most common one is self-inflicted: `start()` upgrades the session to
+    /// `.playAndRecord`, which reconfigures the hardware, which posts this notification
+    /// on the very engine that just started. Treating that as "the world changed" tore
+    /// the engine down and rebuilt it on *every* Talk press, costing a dropped syllable
+    /// at the front of every take.
+    ///
+    /// So: ask whether the hardware format actually moved away from the one the live tap
+    /// was installed with. If it did not, the graph is still valid and the engine only
+    /// needs starting again — the system stops it on any configuration change regardless.
+    private func handleConfigurationChange() {
+        // Nothing is installed and nothing is running, so nothing can be invalid.
+        guard isRunning else { return }
+
+        guard let installed = installedTapFormat else {
+            onNeedsRestart?()
+            return
+        }
+
+        let hardware = engine.inputNode.inputFormat(forBus: 0)
+        guard TapFormatCheck.isUsable(tapSampleRate: installed.sampleRate,
+                                      tapChannels: installed.channelCount,
+                                      hardwareSampleRate: hardware.sampleRate,
+                                      hardwareChannels: hardware.channelCount) else {
+            log.info("Hardware format moved under the tap — rebuilding")
+            onNeedsRestart?()
+            return
+        }
+
+        guard !engine.isRunning else { return }
+        do {
+            engine.prepare()
+            try engine.start()
+        } catch {
+            log.error("Engine would not restart in place: \(error.localizedDescription)")
+            onNeedsRestart?()
+        }
     }
 
     /// Rebuild from nothing. Everything in the old graph may be invalid.

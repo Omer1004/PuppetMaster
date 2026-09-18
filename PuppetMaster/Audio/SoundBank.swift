@@ -41,7 +41,10 @@ final class SoundBank {
         guard !isStarted else { return }
         isStarted = true
         observeSystemAudioEvents()
-        AudioSession.activateForPlayback()
+        // `reactivate()` rather than `activateForPlayback()` for the same reason: at
+        // cold start the intent is already playback so this is identical, and if the
+        // app is ever restarted while input is live it does not silently drop it.
+        AudioSession.reactivate()
         buildGraph()
     }
 
@@ -138,7 +141,12 @@ final class SoundBank {
             engine = AVAudioEngine()
             observeSystemAudioEvents()
         }
-        AudioSession.activateForPlayback()
+        // Re-assert, never downgrade. The notification that brings us here is most
+        // often the microphone upgrading the session — so calling `activateForPlayback`
+        // here pulled the category back to `.playback` while the user was still holding
+        // Talk, and the microphone then upgraded again. The two engines fought each
+        // other for the whole take.
+        AudioSession.reactivate()
         buildGraph()
         log.info("Sound graph rebuilt after a system audio change")
     }

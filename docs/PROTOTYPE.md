@@ -130,7 +130,11 @@ by reading:
 - Mode sheet, with Big Screen and Duo correctly disabled *and explained*
 - Duo Rehearsal: two surfaces, one engine
 - Talk → Silly Voice fallback: label switch, live level meter, jaw opening and closing
-- 31/31 unit tests, and the `Core/` purity check
+- 66/66 unit tests, and the `Core/` purity check
+- The app icon is in the bundle and registered in `Info.plist`, and `PrivacyInfo.xcprivacy`
+  ships at the bundle root
+- Building a puppet costs ~29 ms cold and ~0.1 ms warm (iPhone 18 Pro Simulator,
+  measured after the stamp cache landed; it was ~92 ms before)
 
 ## NOT verified — do not assume these work
 
@@ -140,10 +144,11 @@ by reading:
 | **Big Screen / external display** | No display was available. The scene role and delegate are wired, but the code path has never run. | An AirPlay receiver or a cable. Still the open ⚠️ spike from ARCHITECTURE §6.3. |
 | **Duo** | No hardware, no SDK. | Both. |
 | **Haptics** | Simulator does not produce them. | A real device. |
-| **Landscape, and Duo Rehearsal side by side** | Only portrait was exercised. | Five minutes on a device. |
+| **Landscape, and Duo Rehearsal side by side** | The layout *decision* is now a pure function with its own tests (`StageLayout`), and the side-by-side branch composes and builds — but no one has looked at it. This Xcode install has no `Simulator.app`, so the simulator cannot be rotated from here. | Five minutes on a device, or an Xcode with the Simulator app. |
 | **CI** | The workflow has never run; the hosted runner image may not have Xcode 26+. | One push. Expect to fix it. |
-| **Performance** | Never profiled. Four backdrops and five confetti emitters are new since the last look. | Instruments, on the oldest device we decide to support. |
+| **Performance** | Two things now measured on the Simulator: `apply(pose:)` at 1.55 µs/frame (0.02% of a 16.7 ms budget for two puppets), and building a puppet at ~29 ms cold / ~0.1 ms warm. Neither has been measured on a device, and the steady-state frame rate with two full rigs has never been profiled at all. | Instruments, on the oldest device we decide to support. |
 | **VoiceOver** | Labels exist; VoiceOver has never actually been switched on. | An hour with the screen reader. |
+| **Dynamic Type** | Every fixed font size is now a text style, and the tiles, the Talk bar and the grid columns grow with `@ScaledMetric` — but only the default size has been looked at. | Five minutes with the text-size slider at the accessibility sizes. |
 
 ---
 

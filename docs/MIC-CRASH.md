@@ -87,6 +87,37 @@ app switches categories:
 `TapFormatCheck` is pure and unit-tested. The AVFoundation glue around it is thin and
 correct by construction, because it cannot be tested without hardware.
 
+## What the first version of that fix got wrong
+
+Code review found two defects in the seven points above, both invisible in the
+Simulator, and both now fixed.
+
+**The two engines fought over the session.** Point 2 said "both engines observe
+configuration changes and rebuild" — but `SoundBank.rebuild()` rebuilt by calling
+`activateForPlayback()`. The thing that most reliably posts a configuration change *is*
+the microphone upgrading the session to `.playAndRecord`. So every Talk press ran:
+
+1. mic upgrades to `.playAndRecord`
+2. hardware reconfigures, notification posted
+3. sound bank drags the category back to `.playback` **while the button is still held**
+4. mic sees that change and upgrades again — back to 2
+
+`AudioSession` now holds an *intent* (`.playback` or `.recording`) and is the single
+place that decides. Owners declare what they need; a rebuilding engine calls
+`reactivate()`, which re-asserts whatever is currently intended and never changes it.
+
+**Every Talk press tore the mic down and rebuilt it.** Same root cause from the other
+side: the mic's own configuration-change handler could not tell its own session upgrade
+from a real route change, so it rebuilt on both. It now compares the hardware format
+against the one the live tap was installed with — using `TapFormatCheck` again. If the
+format has not moved, the graph is still valid and the engine is simply started again.
+
+**And a narrower version of Leak C.** `apply()` swallowed a throw and cleared the
+recording flag regardless, so a `setCategory` that failed left the session in
+`.playAndRecord` with the flag saying otherwise — the recording indicator stays lit
+until the app is killed, and nothing ever retries. The intent now only moves on success,
+so the next `returnToPlaybackIfNeeded()` tries again.
+
 ## Confirming it
 
 This diagnosis is from code and documented contract, not from a stack trace. To confirm

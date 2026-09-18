@@ -51,15 +51,29 @@ final class StagePerformer: PuppetRenderer {
             world.setScale(scale)
             return
         }
+        // Keyed, and the previous one removed first. `.scale(to:)` captures its delta
+        // when it starts, so two overlapping focus changes — easy to produce with the
+        // swap button, or by tapping between puppets — used to settle on a scale that
+        // was neither puppet's, and that scale is the layout's, not a cosmetic one.
+        world.removeAction(forKey: Self.focusKey)
         world.run(.group([.fadeAlpha(to: alpha, duration: 0.22),
-                          .scale(to: scale, duration: 0.22)]))
+                          .scale(to: scale, duration: 0.22)]),
+                  withKey: Self.focusKey)
     }
 
     /// Put the puppet in its slot. Called by the scene's layout, never by the engine.
     func place(at home: CGPoint, scale: CGFloat, focused: Bool) {
         self.home = home
         self.baseScale = scale
-        if world.action(forKey: Self.shakeKey) == nil { world.position = home }
+        if world.action(forKey: Self.shakeKey) == nil {
+            world.position = home
+        } else {
+            // A shake ends with `.move(to:)` back to the home it captured when it
+            // started. If the layout moved underneath it, that is the wrong place and
+            // nothing would correct it until the next layout, which may never come.
+            world.removeAction(forKey: Self.shakeKey)
+            world.position = home
+        }
         setFocused(focused, animated: false)
     }
 
@@ -127,6 +141,7 @@ final class StagePerformer: PuppetRenderer {
     // MARK: Shake
 
     private static let shakeKey = "shake"
+    private static let focusKey = "focus"
 
     /// A short, decaying jolt. Weight is invisible in a 2D puppet until something it
     /// does moves the world — this is the cheapest way to make a landing land.

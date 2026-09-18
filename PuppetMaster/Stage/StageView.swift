@@ -12,7 +12,15 @@ struct StageView: View {
     /// False for an audience-facing surface: the stage on a TV is not a control.
     var isInteractive: Bool = true
 
-    @State private var scene = PuppetScene(size: CGSize(width: 390, height: 520))
+    /// Held behind a box that builds the scene lazily.
+    ///
+    /// `@State private var scene = PuppetScene(...)` looks equivalent and is not: the
+    /// initial value is evaluated every time the struct is initialised, and SwiftUI then
+    /// throws the new one away if state already exists. `RootView`'s body re-evaluates
+    /// on every observation change, so that was a whole `SKScene` — and a
+    /// `StagePerformer` — built and discarded on each one.
+    @State private var sceneBox = SceneBox()
+    private var scene: PuppetScene { sceneBox.scene }
     @State private var touchStartedAt: Date?
     /// Which puppet the current touch started on, so a drag that wanders across the
     /// middle keeps driving the puppet it began with.
@@ -110,4 +118,11 @@ struct StageView: View {
         return (Double((localX / slotWidth) * 2 - 1),
                 Double(1 - (point.y / (size.height * 0.75)) * 2))
     }
+}
+
+/// Lazy storage for the scene. A plain reference type, not observable: nothing about it
+/// changes, it exists so that constructing `StageView` costs nothing.
+@MainActor
+private final class SceneBox {
+    lazy var scene = PuppetScene(size: CGSize(width: 390, height: 520))
 }

@@ -46,6 +46,9 @@ final class PuppetRig {
     // MARK: Build
 
     init(character: CharacterDescriptor) {
+        // Before anything is baked, including the eyes below. Everything this
+        // initialiser draws is cached against this id.
+        PuppetPaint.beginCharacter(character.id)
         self.character = character
         surface = character.surface ?? .init()
         headBaseY = CGFloat(character.head.centerY)
@@ -317,14 +320,17 @@ final class PuppetRig {
         let c = character.crest
         let s = CGFloat(c.size)
         let p = CGMutablePath()
-        var opacity: CGFloat = 1
 
         crestPivot.position.y = CGFloat(c.offsetY)
 
+        // Nothing to draw, so draw nothing. This used to bake a 2x2 transparent texture
+        // and add it at alpha 0 — invisible, but still a texture and still a node on the
+        // path that builds a whole puppet.
+        guard c.kind != .none else { return }
+
         switch c.kind {
         case .none:
-            p.addEllipse(in: CGRect(x: -1, y: -1, width: 2, height: 2))
-            opacity = 0
+            break
 
         case .tuft:
             p.move(to: CGPoint(x: -29 * s, y: -8 * s))
@@ -412,9 +418,7 @@ final class PuppetRig {
                 contour: palette.outline, contourWidth: 2.6
             )
         }
-        let sprite = crest.node()
-        sprite.alpha = opacity
-        crestPivot.addChild(sprite)
+        crestPivot.addChild(crest.node())
     }
 
     private func buildFace() {
@@ -880,6 +884,9 @@ private final class PuppetEye {
         lidEdge.zPosition = 4
         crop.addChild(lidEdge)
 
+        // Two of the four characters have no lashes. Baking a transparent texture for
+        // them and adding an empty node is work and memory for nothing.
+        if surface.lashLength > 0 {
         let lashArt = PuppetPaint.bake(
             bounds: CGRect(x: -r - 3, y: -2, width: 2 * r + 6, height: 18)
         ) { context in
@@ -900,6 +907,7 @@ private final class PuppetEye {
         lashes.addChild(lashArt.node())
         lashes.zPosition = 5
         crop.addChild(lashes)
+        }
 
         let lower = CGMutablePath()
         lower.addArc(
@@ -986,11 +994,46 @@ private struct PuppetStamp {
 
 @MainActor
 private enum PuppetPaint {
+
+    // MARK: Stamp cache
+    //
+    // Baking a whole puppet was measured at ~100 ms on the Simulator, and it happens
+    // synchronously on the main thread from a button tap in the cast sheet — once per
+    // attached renderer, so twice in Big Screen mode and twice again for a duet. Nothing
+    // about a character's stamps changes at runtime, so flipping back to one you have
+    // already seen should cost nothing.
+    //
+    // Keyed by character id, source line and bounds. `#line` is what makes this work
+    // without touching twenty-one call sites: it is unique per call site, stable across
+    // builds, and cannot collide between two different drawings.
+
+    private static var cache: [String: PuppetStamp] = [:]
+    /// Least-recently-built first. Two is the working set (a duet); three leaves room to
+    /// flip to a third character and back without paying for it.
+    private static var recentCharacters: [String] = []
+    private static let maximumCachedCharacters = 3
+    private static var currentCharacterID = ""
+
+    /// Called once at the top of `PuppetRig.init`, before anything is baked.
+    static func beginCharacter(_ id: String) {
+        currentCharacterID = id
+        recentCharacters.removeAll { $0 == id }
+        recentCharacters.append(id)
+        while recentCharacters.count > maximumCachedCharacters {
+            let evicted = recentCharacters.removeFirst()
+            let prefix = evicted + "#"
+            cache = cache.filter { !$0.key.hasPrefix(prefix) }
+        }
+    }
+
     static func bake(
         bounds: CGRect,
+        line: Int = #line,
         draw: (CGContext) -> Void
     ) -> PuppetStamp {
         let bounds = bounds.integral
+        let key = "\(currentCharacterID)#\(line)#\(bounds)"
+        if let cached = cache[key] { return cached }
         let format = UIGraphicsImageRendererFormat()
         // Fixed density avoids tripling texture dimensions on a 3× phone.
         // These parts normally display at roughly one design point per screen point.
@@ -1010,7 +1053,9 @@ private enum PuppetPaint {
 
         let texture = SKTexture(image: image)
         texture.filteringMode = .linear
-        return PuppetStamp(texture: texture, bounds: bounds)
+        let stamp = PuppetStamp(texture: texture, bounds: bounds)
+        cache[key] = stamp
+        return stamp
     }
 
     static func ellipse(_ rect: CGRect) -> CGPath {
@@ -1211,7 +1256,12 @@ private enum PuppetPaint {
         guard amount > 0 else { return }
 
         var noise = PuppetNoise(seed: seed)
-        let count = min(12_000, max(24, Int(bounds.width * bounds.height / 7)))
+        // One fibre per 28 square points, capped. The first version used one per 7 and
+        // capped at 12,000, which was measured as roughly 87% of the ~100 ms it took to
+        // build a whole puppet. At these texture sizes the extra strokes were landing on
+        // top of each other: the weave reads the same, and what little density is lost
+        // is bought back by stroking slightly harder below.
+        let count = min(3_000, max(24, Int(bounds.width * bounds.height / 28)))
         let light = CGMutablePath()
         let dark = CGMutablePath()
         let length = CGFloat(surface.fiberLength).clamped(to: 0.4...3)
@@ -1229,11 +1279,11 @@ private enum PuppetPaint {
 
         stroke(
             dark, in: context, color: ColorSpec(0.08, 0.05, 0.04),
-            width: 0.55, alpha: contrast
+            width: 0.7, alpha: contrast * 1.35
         )
         stroke(
             light, in: context, color: ColorSpec(1, 0.98, 0.90),
-            width: 0.65, alpha: contrast * 1.2
+            width: 0.8, alpha: contrast * 1.6
         )
     }
 }

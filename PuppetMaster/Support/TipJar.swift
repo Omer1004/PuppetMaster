@@ -110,7 +110,14 @@ final class TipJar {
     /// the app on every launch, forever.
     private func finish(_ result: VerificationResult<Transaction>) async {
         guard case .verified(let transaction) = result else {
-            log.error("Ignoring an unverified transaction")
+            // Finished, not just ignored. An unfinished transaction comes back through
+            // `Transaction.updates` on every single launch — so silently dropping this
+            // one leaves the user with a permanently stuck tip. Nothing is unlocked
+            // either way: a tip buys gratitude, so there is nothing to withhold.
+            if case .unverified(let transaction, let error) = result {
+                log.error("Finishing an unverified transaction: \(error.localizedDescription)")
+                await transaction.finish()
+            }
             return
         }
         guard Self.productIDs.contains(transaction.productID) else {
