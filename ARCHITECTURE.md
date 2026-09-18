@@ -524,3 +524,50 @@ actually matters).
 - **No plugin system, no scripting layer, no character editor.** Characters are JSON
   + art. That is the extensibility story, and it is enough.
 - **No Duo code.** Only a Duo-shaped hole.
+
+## 11. Two puppets
+
+A puppet is a *performance*: its own pose, its own idle rhythm, its own boredom clock.
+So a second puppet is a second `PuppetEngine`, not a flag on the first one. That choice
+is why the duet added no animation code at all — every layer, action and driver was
+already written against one engine.
+
+```
+Troupe
+├── engines: [PuppetEngine]     one per puppet
+├── focusIndex                  whose thumbs are on which
+└── onSound ──────────────────▶ one SoundBank (sound is per performance, not per puppet)
+
+PuppetScene                     the stage: sky, floor, stars
+└── performers: [StagePerformer]  ← the PuppetRenderer the engine actually talks to
+```
+
+`PuppetScene` used to be the renderer and to own a rig. Splitting `StagePerformer` out
+of it is what lets two puppets share one sky instead of sitting in two boxes with a seam
+down the middle. The scene lays performers out in slots; each performer owns its own
+world node, so a landing shakes *that* puppet rather than the stage — two bodies, not
+one.
+
+**Focus is staging, not UI.** The puppet being driven stands downstage: slightly larger
+and at full brightness. That answers "which one am I playing" for the performer without
+showing the audience a selection highlight.
+
+Two is the ceiling on purpose. A third puppet on a phone is too small to read, and the
+controls stop being obvious within seconds — which is the entire product.
+
+## 12. Audio on real hardware
+
+The audio session and both engines are dynamic, not static. Phone calls, Siri,
+headphones and this app's own session upgrade all reconfigure the hardware underneath a
+running `AVAudioEngine`, and an engine that is not told about it aborts the process the
+next time it is used — via an Objective-C exception that Swift cannot catch.
+
+Both `SoundBank` and `MicAmplitudeSource` therefore observe
+`configurationChangeNotification`, `interruptionNotification` and
+`mediaServicesWereResetNotification`, and rebuild. The microphone reinstalls its tap on
+every start against a freshly-read format, validated first by `TapFormatCheck` — a pure,
+unit-tested restatement of the precondition AVFAudio asserts on. `docs/MIC-CRASH.md` has
+the full account; it is worth reading before touching this layer.
+
+The lesson worth keeping: `isInputUsable` returns false in the Simulator, so **the entire
+microphone path is device-only**. Nothing in it can be caught by a Simulator test run.

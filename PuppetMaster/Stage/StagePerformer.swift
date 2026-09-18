@@ -41,8 +41,11 @@ final class StagePerformer: PuppetRenderer {
     /// both: the one being driven stands slightly downstage, brighter and larger. It
     /// reads as depth rather than as a selection.
     func setFocused(_ focused: Bool, animated: Bool) {
-        let alpha: CGFloat = focused ? 1 : 0.72
-        let scale = baseScale * (focused ? 1 : 0.92)
+        // Tuned against a light backdrop: at 0.72 the upstage puppet read as faded
+        // rather than further away, which looks like a bug. Most of the separation
+        // should come from size, with alpha only taking the edge off.
+        let alpha: CGFloat = focused ? 1 : 0.88
+        let scale = baseScale * (focused ? 1 : 0.90)
         guard animated else {
             world.alpha = alpha
             world.setScale(scale)

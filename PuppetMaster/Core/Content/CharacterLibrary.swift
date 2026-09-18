@@ -42,7 +42,12 @@ public enum CharacterLibrary {
         brows: .init(),
         arms: .init(),
         crest: .init(kind: .tuft, size: 1.0, offsetY: 74, swing: 1.0),
-        personality: .init(voicePitch: 1.0))
+        personality: .init(voicePitch: 1.0),
+        // Broad muzzle, no lashes, a coarse weave: Moppet is the plain one on purpose,
+        // so everyone else has something to be different from.
+        surface: .init(fiberContrast: 0.085, fiberLength: 2.2,
+                       muzzleWidth: 42, muzzleHeight: 20, lashLength: 0,
+                       blush: ColorSpec(0.94, 0.43, 0.35)))
 
     // MARK: Pip — the excitable one
 
@@ -70,7 +75,11 @@ public enum CharacterLibrary {
         personality: .init(breathPeriod: 2.1, breathAmount: 1.5,
                            blinkInterval: ClosedRangeSpec(0.9, 2.8), blinkSpeed: 1.5,
                            swayAmount: 1.5, gazeWander: 1.7, headTiltAmount: 1.4,
-                           doubleBlinkChance: 0.45, voicePitch: 1.42))
+                           doubleBlinkChance: 0.45, voicePitch: 1.42),
+        // Fine weave and long lashes to match the fast blink — small and bright.
+        surface: .init(fiberContrast: 0.055, fiberLength: 1.0,
+                       muzzleWidth: 30, muzzleHeight: 16, lashLength: 5,
+                       blush: ColorSpec(0.96, 0.36, 0.32)))
 
     // MARK: Bramble — the deadpan one
 
@@ -99,7 +108,11 @@ public enum CharacterLibrary {
         personality: .init(breathPeriod: 5.6, breathAmount: 0.7,
                            blinkInterval: ClosedRangeSpec(5.0, 11.0), blinkSpeed: 0.65,
                            swayAmount: 0.55, gazeWander: 0.5, headTiltAmount: 0.6,
-                           doubleBlinkChance: 0.05, voicePitch: 0.66))
+                           doubleBlinkChance: 0.05, voicePitch: 0.66),
+        // A deep muzzle, which is most of why Bramble's face reads as heavy.
+        surface: .init(fiberContrast: 0.070, fiberLength: 1.8,
+                       muzzleWidth: 38, muzzleHeight: 24, lashLength: 0,
+                       blush: ColorSpec(0.84, 0.41, 0.54)))
 
     // MARK: Thistle — the troublemaker
 
@@ -128,5 +141,9 @@ public enum CharacterLibrary {
         personality: .init(breathPeriod: 2.8, breathAmount: 0.9,
                            blinkInterval: ClosedRangeSpec(1.4, 4.2), blinkSpeed: 1.8,
                            swayAmount: 1.8, gazeWander: 1.9, headTiltAmount: 1.6,
-                           doubleBlinkChance: 0.40, voicePitch: 0.82))
+                           doubleBlinkChance: 0.40, voicePitch: 0.82),
+        // The coarsest weave in the cast, to go with the spikes.
+        surface: .init(fiberContrast: 0.095, fiberLength: 1.3,
+                       muzzleWidth: 48, muzzleHeight: 18, lashLength: 0,
+                       blush: ColorSpec(0.86, 0.43, 0.25)))
 }

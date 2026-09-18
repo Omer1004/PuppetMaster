@@ -71,3 +71,16 @@ open PuppetMaster.xcodeproj
 ## Toolchain
 
 Xcode 27.0 · Swift 6.4 · iOS 27.0 SDK · proposed deployment target iOS 26.0
+
+## Recent work
+
+| Change | Where |
+|---|---|
+| Device microphone crash — root cause and fix | [docs/MIC-CRASH.md](docs/MIC-CRASH.md) |
+| Two puppets side by side | `PuppetMaster/App/Troupe.swift`, `PuppetMaster/Stage/StagePerformer.swift`, ARCHITECTURE §11 |
+| Redrawn cast (felt material, lit forms, faces) | `PuppetMaster/Stage/PuppetRig.swift`, `CharacterDescriptor.Surface` |
+| Tip jar | `PuppetMaster/Support/TipJar.swift`, `Config/PuppetMaster.storekit` |
+| What is and is not verified | [docs/PROTOTYPE.md](docs/PROTOTYPE.md) |
+
+> ⚠️ The tip jar and the Kids Category need a decision together before submission —
+> see Q1 in [docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md).

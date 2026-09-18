@@ -49,8 +49,40 @@ public struct CharacterDescriptor: Identifiable, Sendable, Codable, Equatable {
     public var arms: Arms
     public var crest: Crest
     public var personality: Personality
+    /// How the character's surface is lit and finished — the difference between a filled
+    /// path and something that looks made of felt. Optional so a character encoded
+    /// before this existed still decodes, and falls back to a sensible material.
+    public var surface: Surface? = nil
 
     // MARK: Parts
+
+    /// Material and the small facial features that carry most of the appeal.
+    public struct Surface: Sendable, Codable, Equatable {
+        /// How strongly the fibre texture reads. Too high and it stops being fabric and
+        /// starts being noise.
+        public var fiberContrast: Double
+        public var fiberLength: Double
+        public var muzzleWidth: Double
+        public var muzzleHeight: Double
+        /// Zero for characters that should not have lashes — it is a strong signal and
+        /// only some of the cast want it.
+        public var lashLength: Double
+        public var blush: ColorSpec
+
+        public init(fiberContrast: Double = 0.075,
+                    fiberLength: Double = 1.6,
+                    muzzleWidth: Double = 40,
+                    muzzleHeight: Double = 20,
+                    lashLength: Double = 0,
+                    blush: ColorSpec = ColorSpec(0.92, 0.39, 0.36)) {
+            self.fiberContrast = fiberContrast
+            self.fiberLength = fiberLength
+            self.muzzleWidth = muzzleWidth
+            self.muzzleHeight = muzzleHeight
+            self.lashLength = lashLength
+            self.blush = blush
+        }
+    }
 
     public struct Palette: Sendable, Codable, Equatable {
         public var fur: ColorSpec

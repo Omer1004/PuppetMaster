@@ -14,6 +14,17 @@ less crowded category.
 the privacy work — all expensive to retrofit.
 *Recommendation: yes, target Kids, and design for zero third-party SDKs anyway.*
 
+> ⚠️ **This now blocks shipped code.** A tip jar was added (`TipJar`, three
+> consumables behind the Stage sheet). The Kids Category does **not** forbid in-app
+> purchase, but it does require a parental gate in front of it — and Apple reviews that
+> gate strictly for apps aimed at under-13s. As shipped, the tip jar has **no parental
+> gate**. Either:
+> - target Kids → add a gate in front of `TipJarSheet` before submission; or
+> - do not target Kids → the tip jar is fine as it stands.
+>
+> Do not submit with the current combination. Nothing else in the app depends on the
+> answer, so this is a small change either way — but it has to be made deliberately.
+
 ### Q2 — Who is the primary buyer: the parent or the kid? 🔴
 Both use the app; only one pays. Parent-first means calmer visual design, a visible
 "made for grown-ups to perform" framing, and simpler pricing. Kid-first means louder

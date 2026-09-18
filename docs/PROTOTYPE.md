@@ -174,3 +174,44 @@ by reading:
    not whether it compiles.
 3. **Run the external-display spike** for real, and decide whether Big Screen is a
    must-have or an option.
+
+---
+
+## Update — duet, the new rig, and the device microphone
+
+### Works, and seen working in the Simulator
+
+- **Two puppets side by side.** One `PuppetEngine` each, one shared stage. The puppet
+  you are driving stands downstage — slightly larger and brighter — and the other
+  blinks and breathes on its own clock. Verified: both puppets on screen, independent
+  idle, the choice surviving a relaunch, and the swap button in the header.
+- **Tap either puppet to take it over.** A touch picks the puppet in that half of the
+  stage and drives it from then on, even if the drag wanders across the middle.
+- **The redrawn cast.** Baked gradients, a fibre texture, rim and bounce light, muzzle,
+  cheeks that flush, lashes, a set eyeball with two catchlights. All generated at load;
+  `apply(pose:)` is still a pure transform binding with no per-frame path or texture
+  work — more strictly so than the version it replaced, which rebuilt the smile path
+  every frame.
+- **Tip jar**, with a local StoreKit configuration attached to the shared scheme.
+
+### Fixed but NOT verified on hardware
+
+- **The microphone crash.** Root-caused from code and documented in `docs/MIC-CRASH.md`,
+  but the phone that crashed has not been tested again, and no device crash report was
+  available to confirm the diagnosis. This is the single most important thing to retest.
+
+### Still NOT verified
+
+Unchanged from before, plus two new entries:
+
+- Microphone end to end on a real device — including the new recovery paths (a phone
+  call mid-sentence, headphones connected while talking, media services restarting).
+  None of these can be triggered in the Simulator.
+- **60fps with two puppets on a real device.** Two full rigs now draw at once and each
+  is a baked sprite tree rather than a handful of shape nodes. This has not been
+  profiled anywhere, and the graphics work came with an explicit note that the eye masks
+  want profiling with both puppets visible.
+- The tip jar against **real** App Store Connect products. Locally it runs against
+  `Config/PuppetMaster.storekit`; the three product IDs do not exist in App Store
+  Connect yet, so in production the sheet will currently show "not available".
+- External display, haptics, landscape, CI, VoiceOver actually switched on.
