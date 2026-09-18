@@ -11,11 +11,17 @@ import OSLog
 @MainActor
 final class SoundBank {
 
-    private let engine = AVAudioEngine()
+    /// Replaced rather than reused after a media services reset, which invalidates
+    /// every object in the old graph.
+    private var engine = AVAudioEngine()
     private var players: [AVAudioPlayerNode] = []
     private var nextPlayer = 0
     private var cache: [String: AVAudioPCMBuffer] = [:]
-    private var isRunning = false
+    /// Whether the app *wants* sound running. Whether it actually is, is
+    /// `engine.isRunning` — the system stops the engine without telling this flag, and
+    /// trusting it was one of two ways the app used to abort on device.
+    private var isStarted = false
+    private var observers: [any NSObjectProtocol] = []
     private let log = Logger(subsystem: "com.omerwm.puppetmaster", category: "sound")
 
     /// Honours the app's sound setting. Off means silent, not quieter.
@@ -32,9 +38,20 @@ final class SoundBank {
     // MARK: Lifecycle
 
     func start() {
-        guard !isRunning else { return }
+        guard !isStarted else { return }
+        isStarted = true
+        observeSystemAudioEvents()
         AudioSession.activateForPlayback()
+        buildGraph()
+    }
 
+    func stop() {
+        guard isStarted else { return }
+        isStarted = false
+        tearDownGraph()
+    }
+
+    private func buildGraph() {
         for _ in 0..<Self.voiceCount {
             let player = AVAudioPlayerNode()
             engine.attach(player)
@@ -46,22 +63,84 @@ final class SoundBank {
         do {
             try engine.start()
             for player in players { player.play() }
-            isRunning = true
         } catch {
             // No sound is a smaller loss than a crash; the puppet still performs.
             log.error("Sound engine did not start: \(error.localizedDescription)")
         }
     }
 
-    func stop() {
-        guard isRunning else { return }
-        stopAll()
+    private func tearDownGraph() {
+        for player in players {
+            player.stop()
+            engine.detach(player)
+        }
+        players.removeAll()
+        nextPlayer = 0
         engine.stop()
-        isRunning = false
     }
 
+    /// Silence anything ringing, without touching the graph.
+    ///
+    /// `play()` on a node whose engine is not running raises an Objective-C exception
+    /// that Swift cannot catch, so it is only ever called behind `engine.isRunning`.
     private func stopAll() {
-        for player in players { player.stop(); player.play() }
+        let running = engine.isRunning
+        for player in players {
+            player.stop()
+            if running { player.play() }
+        }
+    }
+
+    // MARK: Surviving the system
+
+    /// The audio hardware belongs to the system, not to this app. Switching the session
+    /// category for the microphone, a phone call, or a pair of headphones all
+    /// reconfigure it — and a reconfiguration stops this engine and invalidates every
+    /// connection made with an explicit format, which is all of them. See
+    /// `docs/MIC-CRASH.md`.
+    private func observeSystemAudioEvents() {
+        guard observers.isEmpty else { return }
+        let centre = NotificationCenter.default
+
+        observers.append(centre.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: engine, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.rebuild(freshEngine: false) }
+            })
+
+        observers.append(centre.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification,
+            object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.rebuild(freshEngine: true) }
+            })
+
+        observers.append(centre.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil, queue: .main) { [weak self] note in
+                guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      let type = AVAudioSession.InterruptionType(rawValue: raw),
+                      type == .ended else { return }
+                MainActor.assumeIsolated { self?.rebuild(freshEngine: false) }
+            })
+    }
+
+    /// Put the graph back after the system pulled it apart.
+    ///
+    /// A media services reset invalidates the engine object itself, so that case gets a
+    /// new one — and with it new observers, because the configuration-change
+    /// notification is posted by a specific engine instance.
+    private func rebuild(freshEngine: Bool) {
+        guard isStarted else { return }
+        tearDownGraph()
+        if freshEngine {
+            for observer in observers { NotificationCenter.default.removeObserver(observer) }
+            observers.removeAll()
+            engine = AVAudioEngine()
+            observeSystemAudioEvents()
+        }
+        AudioSession.activateForPlayback()
+        buildGraph()
+        log.info("Sound graph rebuilt after a system audio change")
     }
 
     // MARK: Playing
@@ -69,12 +148,15 @@ final class SoundBank {
     /// `pitch` multiplies the sound's natural frequency — 1.4 for a small excitable
     /// character, 0.66 for a large slow one.
     func play(_ sound: SoundID, pitch: Double = 1, volume: Float = 1) {
-        guard isEnabled, isRunning else { return }
+        // Asked of the engine, never of a cached flag. The system stops the engine
+        // during a session change, and scheduling into a stopped one is undefined.
+        guard isEnabled, isStarted, engine.isRunning, !players.isEmpty else { return }
         guard let buffer = buffer(for: sound, pitch: pitch) else { return }
 
         let player = players[nextPlayer]
         nextPlayer = (nextPlayer + 1) % players.count
         player.volume = volume
+        if !player.isPlaying { player.play() }
         player.scheduleBuffer(buffer, at: nil, options: .interrupts)
     }
 

@@ -37,6 +37,11 @@ final class VoiceInput {
     @ObservationIgnored private var meterSmoother = Smoother(attack: 0.05, release: 0.18)
 
     init() {
+        // The microphone reports hardware trouble; deciding what to do about it needs to
+        // know whether a take is in progress, which only this type does.
+        mic.onNeedsRestart = { [weak self] in self?.recoverMicrophone() }
+        mic.onInterrupted = { [weak self] in self?.endTalking() }
+
         switch MicAmplitudeSource.permission {
         case .granted:      permission = .granted
         case .denied:       permission = .denied; source = .silly
@@ -119,6 +124,18 @@ final class VoiceInput {
         meterSmoother.update(target: raw, delta: delta)
         if abs(meterSmoother.value - displayLevel) > 0.02 { displayLevel = meterSmoother.value }
         return raw
+    }
+
+    /// The audio hardware was reconfigured underneath us — a headphone plugged in, a
+    /// call ending, media services restarting. Rebuild, and if the microphone cannot be
+    /// brought back mid-sentence, carry on in the silly voice rather than going quiet.
+    /// A puppet that stops moving its mouth reads as a broken app.
+    private func recoverMicrophone() {
+        guard source == .microphone else { return }
+        if !mic.restartAfterSystemChange(), isTalking {
+            source = .silly
+            silly.reset()
+        }
     }
 
     func teardown() { mic.teardown() }

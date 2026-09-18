@@ -90,6 +90,25 @@ struct ControlsView: View {
                 .accessibilityLabel("Character: \(engine.character.name)")
                 .accessibilityHint("Choose who performs.")
 
+            // In a duet, the fastest way to hand over. Tapping the other puppet on
+            // stage does the same thing, but that only works when the stage is reachable
+            // — on an external display or a Duo it is not.
+            if environment.isDuet {
+                Button {
+                    environment.troupe.toggleFocus()
+                    Haptics.expressionChanged()
+                } label: {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Theme.label)
+                        .padding(.horizontal, 9).padding(.vertical, 7)
+                        .background(Capsule().fill(Theme.panelRaised))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Switch puppet")
+                .accessibilityHint("Play the other puppet.")
+            }
+
             // Honest, visible proof that several surfaces are being driven at once.
             if engine.rendererCount > 1 {
                 Label("\(engine.rendererCount)", systemImage: "rectangle.on.rectangle")

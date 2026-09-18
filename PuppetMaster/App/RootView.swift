@@ -48,7 +48,7 @@ struct RootView: View {
     private var soloLayout: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
-                StageView(engine: environment.engine)
+                StageView(troupe: environment.troupe)
                     .frame(height: geometry.size.height * 0.54)
                     .clipped()
 
@@ -69,7 +69,7 @@ struct RootView: View {
             // needs to see what the audience sees — and it is a second live surface,
             // driven by the same engine and the same frame.
             ZStack(alignment: .topLeading) {
-                StageView(engine: environment.engine, isInteractive: false)
+                StageView(troupe: environment.troupe, isInteractive: false)
                     .frame(height: 130)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
@@ -146,7 +146,7 @@ struct AudienceStageView: View {
     private let environment = AppEnvironment.shared
 
     var body: some View {
-        StageView(engine: environment.engine, isInteractive: false)
+        StageView(troupe: environment.troupe, isInteractive: false)
             .ignoresSafeArea()
     }
 }

@@ -1,0 +1,60 @@
+{
+  "identifier" : "PUPPETMASTERTIPS",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "1.99",
+      "familyShareable" : false,
+      "internalID" : "TIPSMALL",
+      "localizations" : [
+        {
+          "description" : "A coffee for whoever drew these.",
+          "displayName" : "Small tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.omerwm.puppetmaster.tip.small",
+      "referenceName" : "Small tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "TIPMEDIUM",
+      "localizations" : [
+        {
+          "description" : "Generous. Thank you.",
+          "displayName" : "Nice tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.omerwm.puppetmaster.tip.medium",
+      "referenceName" : "Nice tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "TIPLARGE",
+      "localizations" : [
+        {
+          "description" : "Genuinely unnecessary and genuinely appreciated.",
+          "displayName" : "Big tip",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.omerwm.puppetmaster.tip.large",
+      "referenceName" : "Big tip",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

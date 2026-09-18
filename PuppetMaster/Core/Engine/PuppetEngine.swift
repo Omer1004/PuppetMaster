@@ -204,6 +204,15 @@ public final class PuppetEngine: IntentSink {
         idleBeatIndex = 0
     }
 
+    /// Stagger this puppet's boredom clock.
+    ///
+    /// Two puppets that start together climb the boredom ladder in lockstep and yawn in
+    /// unison, which reads as one mechanism rather than two characters with their own
+    /// attention spans.
+    public func offsetIdleClock(by seconds: Double) {
+        idleSeconds = seconds
+    }
+
     /// Turned off for tests and for surfaces where a puppet acting on its own would be
     /// a distraction rather than a delight.
     public var boredomEnabled = true

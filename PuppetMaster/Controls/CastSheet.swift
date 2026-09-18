@@ -13,10 +13,16 @@ struct CastSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                duetSection
+
                 Section {
                     ForEach(CharacterLibrary.all) { character in
                         row(for: character)
                     }
+                } header: {
+                    Text(environment.isDuet
+                         ? "Playing \(environment.engine.character.name)"
+                         : "Character")
                 } footer: {
                     Text("""
                         Every character uses the same rig and the same moves — what \
@@ -35,6 +41,36 @@ struct CastSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    /// Two puppets is a different way to play, not a setting, so it is offered here —
+    /// next to the cast — rather than buried somewhere called Settings.
+    @ViewBuilder private var duetSection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { environment.isDuet },
+                set: { environment.setDuet($0); Haptics.expressionChanged() }
+            )) {
+                Label("Two puppets", systemImage: "person.2.fill")
+            }
+            .tint(Theme.accent)
+
+            if environment.isDuet {
+                Picker("Playing", selection: Binding(
+                    get: { environment.troupe.focusIndex },
+                    set: { environment.troupe.focus($0); Haptics.expressionChanged() }
+                )) {
+                    ForEach(Array(environment.troupe.engines.enumerated()), id: \.offset) { index, engine in
+                        Text(engine.character.name).tag(index)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+        } footer: {
+            Text(environment.isDuet
+                 ? "Tap either puppet on stage to take it over. The one you are playing stands forward."
+                 : "Put a second puppet on stage and switch between them — enough for a conversation.")
+        }
     }
 
     private func row(for character: CharacterDescriptor) -> some View {

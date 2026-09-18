@@ -10,6 +10,7 @@ struct StageSheet: View {
     let router: StageRouter
     let environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
+    @State private var showingTipJar = false
 
     var body: some View {
         NavigationStack {
@@ -33,6 +34,17 @@ struct StageSheet: View {
                         exactly the code a real two-screen device would.
                         """)
                 }
+
+                // Last, small, and unlabelled as anything urgent. It is a tip jar on the
+                // way out, not a checkout on the way in.
+                Section {
+                    Button {
+                        showingTipJar = true
+                    } label: {
+                        Label("Tip Jar", systemImage: "heart")
+                            .foregroundStyle(Theme.accent)
+                    }
+                }
             }
             .navigationTitle("Stage")
             .navigationBarTitleDisplayMode(.inline)
@@ -43,6 +55,9 @@ struct StageSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .sheet(isPresented: $showingTipJar) {
+            TipJarSheet(tipJar: environment.tipJar)
+        }
     }
 
     @ViewBuilder

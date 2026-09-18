@@ -1,34 +1,37 @@
 import SpriteKit
 
-/// One rendering surface for the puppet.
+/// One rendering surface: the stage itself.
 ///
-/// Conforms to ``PuppetRenderer``, so the engine treats it identically to any other
-/// surface. Several can exist at once — the phone's stage and an external display, or
-/// the two halves of a folding device — all driven by one engine and one clock, which
+/// The scene owns what a *stage* has — sky, floor, stars — and one ``StagePerformer``
+/// per puppet standing on it. It is not itself a ``PuppetRenderer``; performers are.
+/// That split is what lets two puppets share one sky instead of sitting in two boxes
+/// with a seam down the middle.
+///
+/// Several scenes can exist at once — the phone's stage and an external display, or the
+/// two halves of a folding device — all driven by the same engines and one clock, which
 /// is what keeps them frame-accurately in step.
 ///
 /// The scene runs no animation of its own: it has no `update(_:)` logic and owns no
-/// timeline. It is a pure function of the pose it is handed.
+/// timeline. It is a pure function of the poses it is handed.
 @MainActor
-final class PuppetScene: SKScene, PuppetRenderer {
+final class PuppetScene: SKScene {
 
-    private var rig: PuppetRig?
-    private var pendingCharacter: CharacterDescriptor?
+    private(set) var performers: [StagePerformer] = []
     private let world = SKNode()
     private var backdropNode: SKSpriteNode?
     private var floorNode: SKShapeNode?
     private var starField: SKNode?
-    private var latestPose: PuppetPose = .neutral
 
     private var backdrop: Backdrop = BackdropLibrary.default
-    /// Where `layout()` put the puppet. The shake animates around this rather than
-    /// from wherever the node happens to be, so a relayout mid-shake cannot strand it.
-    private var worldHome: CGPoint = .zero
+    /// Which puppet the performer's thumbs are currently driving, or nil when there is
+    /// only one and the question does not arise.
+    private var focusIndex: Int?
 
     override init(size: CGSize) {
         super.init(size: size)
         scaleMode = .resizeFill
         backgroundColor = backdrop.skyBottom.uiColor
+        setPerformerCount(1)
     }
 
     @available(*, unavailable)
@@ -43,13 +46,9 @@ final class PuppetScene: SKScene, PuppetRenderer {
         // the old size and silently drops a character loaded while it was detached.
         if backdropNode == nil { buildSceneFurniture() }
 
-        if let pendingCharacter {
-            self.pendingCharacter = nil
-            build(character: pendingCharacter)
-        }
+        for performer in performers { performer.becameLive() }
         applyBackdrop()
         layout()
-        rig?.apply(pose: latestPose)
     }
 
     private func buildSceneFurniture() {
@@ -73,47 +72,96 @@ final class PuppetScene: SKScene, PuppetRenderer {
         layout()
     }
 
-    // MARK: Content
+    // MARK: Cast
+
+    /// How many puppets stand on this stage. Adding one is all a duet needs from the
+    /// rendering side — the second puppet's animation comes from its own engine.
+    func setPerformerCount(_ count: Int) {
+        let count = max(1, count)
+        guard count != performers.count else { return }
+
+        while performers.count > count {
+            performers.removeLast().world.removeFromParent()
+        }
+        while performers.count < count {
+            let performer = StagePerformer()
+            performer.isLive = view != nil
+            performer.backdrop = backdrop
+            performer.onNeedsLayout = { [weak self] in self?.layout() }
+            world.addChild(performer.world)
+            performers.append(performer)
+        }
+        layout()
+    }
+
+    /// The renderer for one puppet. The caller registers it with that puppet's engine.
+    func performer(at index: Int) -> StagePerformer? {
+        performers.indices.contains(index) ? performers[index] : nil
+    }
+
+    func setFocus(_ index: Int?) {
+        guard index != focusIndex else { return }
+        focusIndex = index
+        for (i, performer) in performers.enumerated() {
+            performer.setFocused(isFocused(i), animated: true)
+        }
+    }
+
+    /// With one puppet on stage there is nothing to choose between, so it is always
+    /// fully lit — the dimming is only ever a duet's answer to "which one am I driving".
+    private func isFocused(_ index: Int) -> Bool {
+        guard performers.count > 1, let focusIndex else { return true }
+        return index == focusIndex
+    }
+
+    /// Which puppet a touch at this point belongs to, so that poking the puppet on the
+    /// left pokes the one on the left.
+    func performerIndex(atX x: CGFloat) -> Int {
+        guard performers.count > 1, size.width > 0 else { return 0 }
+        let slot = Int(x / (size.width / CGFloat(performers.count)))
+        return min(max(slot, 0), performers.count - 1)
+    }
+
+    // MARK: Staging
 
     func setBackdrop(_ backdrop: Backdrop) {
         guard backdrop != self.backdrop else { return }
         self.backdrop = backdrop
         backgroundColor = backdrop.skyBottom.uiColor
+        for performer in performers { performer.setBackdrop(backdrop) }
         applyBackdrop()
         layout()
     }
 
-    private func build(character: CharacterDescriptor) {
-        rig?.root.removeFromParent()
-        let rig = PuppetRig(character: character)
-        world.addChild(rig.root)
-        self.rig = rig
-        layout()
-        rig.apply(pose: latestPose)
-    }
-
     // MARK: Layout
 
-    /// Fit the puppet to whatever surface it landed on. The same scene runs full-bleed on
-    /// an external display and in a half-height panel on a phone, with characters of very
-    /// different proportions, so the scale comes from the rig rather than a constant.
+    /// Fit the puppets to whatever surface they landed on. The same scene runs full-bleed
+    /// on an external display and in a half-height panel on a phone, with characters of
+    /// very different proportions, so the scale comes from each rig rather than a
+    /// constant.
     private func layout() {
-        guard size.width > 0, size.height > 0 else { return }
+        guard size.width > 0, size.height > 0, !performers.isEmpty else { return }
 
         let floorY = size.height * 0.16
         let available = size.height - floorY - size.height * 0.05
-        let designWidth = rig?.designWidth ?? 300
-        let designHeight = rig?.designHeight ?? 470
-        let scale = min(size.width / designWidth, available / designHeight)
+        let slotWidth = size.width / CGFloat(performers.count)
 
-        world.setScale(max(scale, 0.05))
-        worldHome = CGPoint(x: size.width / 2, y: floorY)
-        if world.action(forKey: Self.shakeKey) == nil { world.position = worldHome }
+        for (index, performer) in performers.enumerated() {
+            // Two puppets are given a little more room than their slot and allowed to
+            // overlap slightly. Strictly separated they read as two photographs side by
+            // side; overlapping, they read as two characters sharing a stage.
+            let width = performers.count > 1 ? slotWidth * 1.16 : slotWidth
+            let scale = min(width / performer.designWidth, available / performer.designHeight)
+            let x = slotWidth * (CGFloat(index) + 0.5)
+            performer.place(at: CGPoint(x: x, y: floorY),
+                            scale: max(scale, 0.05),
+                            focused: isFocused(index))
+        }
 
         backdropNode?.size = size
         backdropNode?.position = CGPoint(x: size.width / 2, y: size.height / 2)
 
-        // A soft floor band, so the puppet stands on something rather than floating.
+        // A soft floor band, so the puppets stand on something rather than floating.
         floorNode?.path = CGPath(ellipseIn: CGRect(x: -size.width * 0.25,
                                                    y: floorY - size.height * 0.55,
                                                    width: size.width * 1.5,
@@ -159,162 +207,6 @@ final class PuppetScene: SKScene, PuppetRenderer {
             ])))
             starField.addChild(star)
         }
-    }
-
-    // MARK: PuppetRenderer
-
-    func load(character: CharacterDescriptor) {
-        guard view != nil else {
-            // Not on screen yet; build once `didMove(to:)` gives us a view.
-            pendingCharacter = character
-            return
-        }
-        build(character: character)
-    }
-
-    func apply(pose: PuppetPose) {
-        latestPose = pose
-        rig?.apply(pose: pose)
-    }
-
-    func fire(effect: PuppetEffect) {
-        guard rig != nil else { return }
-        // Do NOT set `position` here: each effect chooses its own spawn point in
-        // `makeEmitters` (dust at the feet, sparkle at the head, confetti from above),
-        // and the rig's root is always the world origin.
-        switch effect {
-        case .impact:   shake(11)
-        case .dustPuff: shake(4)
-        default:        break
-        }
-
-        for emitter in makeEmitters(for: effect) {
-            emitter.targetNode = world
-            world.addChild(emitter)
-            // Emitters are one-shot: let them empty, then clean themselves up.
-            emitter.run(.sequence([
-                .wait(forDuration: 0.12),
-                .run { emitter.particleBirthRate = 0 },
-                .wait(forDuration: 3.0),
-                .removeFromParent(),
-            ]))
-        }
-    }
-
-    /// Most effects are a single emitter. Confetti is several, because SpriteKit's
-    /// `particleColorSequence` varies a colour over one particle's *lifetime* — it
-    /// cannot give each scrap of paper its own colour. One emitter per colour can.
-    private func makeEmitters(for effect: PuppetEffect) -> [SKEmitterNode] {
-        guard effect == .confetti else {
-            return [makeEmitter(for: effect)]
-        }
-        return [UIColor.systemPink, .systemYellow, .systemTeal, .systemOrange,
-                UIColor.systemPurple].map { colour in
-            let emitter = makeEmitter(for: .confetti)
-            emitter.particleTexture = ParticleTextures.chip(size: 14, color: colour)
-            emitter.particleBirthRate /= 5
-            emitter.particleColorBlendFactor = 0
-            return emitter
-        }
-    }
-
-    private static let shakeKey = "shake"
-
-    /// A short, decaying jolt. Weight is invisible in a 2D puppet until something it
-    /// does moves the world — this is the cheapest way to make a landing land.
-    private func shake(_ intensity: CGFloat) {
-        world.removeAction(forKey: Self.shakeKey)
-        var steps: [SKAction] = []
-        let count = 7
-        for i in 0..<count {
-            let decay = 1 - CGFloat(i) / CGFloat(count)
-            steps.append(.move(to: CGPoint(
-                x: worldHome.x + .random(in: -1...1) * intensity * decay,
-                y: worldHome.y + .random(in: -1...1) * intensity * decay * 0.55),
-                duration: 0.028))
-        }
-        steps.append(.move(to: worldHome, duration: 0.05))
-        world.run(.sequence(steps), withKey: Self.shakeKey)
-    }
-
-    private func makeEmitter(for effect: PuppetEffect) -> SKEmitterNode {
-        let emitter = SKEmitterNode()
-        emitter.zPosition = 5
-        let headY = rig?.headHeight ?? 250
-
-        switch effect {
-        case .dustPuff, .impact:
-            let heavy = effect == .impact
-            emitter.particleTexture = ParticleTextures.soft(radius: heavy ? 28 : 22, color: .white)
-            emitter.particleBirthRate = heavy ? 460 : 260
-            emitter.particleLifetime = 0.55
-            emitter.particleLifetimeRange = 0.25
-            emitter.particlePositionRange = CGVector(dx: heavy ? 200 : 150, dy: 10)
-            emitter.particleSpeed = heavy ? 140 : 90
-            emitter.particleSpeedRange = 60
-            emitter.emissionAngleRange = .pi
-            emitter.yAcceleration = 40
-            emitter.particleAlpha = 0.55
-            emitter.particleAlphaSpeed = -1.2
-            emitter.particleScale = 0.5
-            emitter.particleScaleRange = 0.35
-            emitter.particleScaleSpeed = 0.8
-            emitter.particleColor = backdrop.floor.uiColor
-            emitter.particleColorBlendFactor = 0.8
-
-        case .sparkle:
-            emitter.position = CGPoint(x: 0, y: headY)
-            emitter.particleTexture = ParticleTextures.symbol("sparkle", size: 26, color: .white)
-            emitter.particleBirthRate = 70
-            emitter.particleLifetime = 0.9
-            emitter.particlePositionRange = CGVector(dx: 230, dy: 190)
-            emitter.particleSpeed = 34
-            emitter.emissionAngleRange = .pi * 2
-            emitter.particleAlpha = 0.95
-            emitter.particleAlphaSpeed = -1.0
-            emitter.particleScale = 0.75
-            emitter.particleScaleRange = 0.4
-            emitter.particleScaleSpeed = -0.35
-            emitter.particleRotationRange = .pi
-
-        case .confetti:
-            emitter.position = CGPoint(x: 0, y: headY * 2.6)
-            emitter.particleTexture = ParticleTextures.chip(size: 14, color: .white)
-            emitter.particleBirthRate = 300
-            emitter.particleLifetime = 2.6
-            emitter.particlePositionRange = CGVector(dx: 300, dy: 20)
-            emitter.particleSpeed = 60
-            emitter.particleSpeedRange = 50
-            emitter.emissionAngle = -.pi / 2
-            emitter.emissionAngleRange = .pi / 3
-            emitter.yAcceleration = -190
-            emitter.particleAlpha = 1
-            emitter.particleAlphaSpeed = -0.3
-            emitter.particleScale = 0.7
-            emitter.particleRotationRange = .pi * 2
-            emitter.particleRotationSpeed = 4
-            emitter.particleColorSequence = nil
-
-        case .musicNotes:
-            emitter.position = CGPoint(x: 0, y: headY * 0.92)
-            emitter.particleTexture = ParticleTextures.symbol("music.note", size: 30, color: .white)
-            emitter.particleBirthRate = 7
-            emitter.particleLifetime = 2.2
-            emitter.particlePositionRange = CGVector(dx: 210, dy: 30)
-            emitter.particleSpeed = 46
-            emitter.particleSpeedRange = 20
-            emitter.emissionAngle = .pi / 2
-            emitter.emissionAngleRange = .pi / 5
-            emitter.xAcceleration = 14
-            emitter.particleAlpha = 0.9
-            emitter.particleAlphaSpeed = -0.4
-            emitter.particleScale = 0.85
-            emitter.particleScaleRange = 0.3
-            emitter.particleRotationRange = 0.7
-            emitter.particleColor = .white
-            emitter.particleColorBlendFactor = 1
-        }
-        return emitter
     }
 }
 
