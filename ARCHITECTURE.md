@@ -118,23 +118,26 @@ them. Consequence: the puppet can be *happy*, *mid-wave*, *talking*, and *breath
 at the same time — which is what makes it read as alive instead of as a menu of
 canned clips.
 
-### 3.3 Character content format
+### 3.3 Character content format — built
 
-A character is **data**, not code, so new characters ship without an app update
-path change and without a code review:
+A character is **data**, not code. `CharacterDescriptor` holds nine groups of numbers
+(palette, body, head, eyes, mouth, brows, arms, crest, personality) and `PuppetRig`
+builds an identical node hierarchy for every one of them. Adding a cast member is one
+value in `CharacterLibrary` — no views, no actions, no renderer work. See
+[docs/CHARACTERS.md](docs/CHARACTERS.md).
 
-```
-Resources/Characters/moppet/
-├─ moppet.json          # rig: parts, pivots, z-order, channel→part bindings,
-│                       # expression targets, action keyframe tracks
-├─ moppet.atlas/        # SKTextureAtlas — cut-out part PNGs @1x/@2x/@3x
-└─ thumb.png
-```
+**Personality is part of the character.** `Personality` feeds the idle layer, so breath
+period, blink interval and sway are character traits rather than constants. This does
+more work than the geometry: Bramble and Pip would still read as different creatures if
+they were the same shape.
 
-`CharacterDescriptor` decodes `moppet.json` with `Codable`. The renderer builds the
-node hierarchy from the descriptor at load time. Adding "Character #2" is an art +
-JSON task, not an engineering task — this matters enormously for the character-pack
-monetization model.
+The descriptors currently live as Swift values rather than bundled JSON. They are
+`Codable` throughout and a test asserts the round trip, so moving them to per-character
+JSON — and from there to downloadable packs — is a *loading* change, not a runtime one.
+Nothing in the engine, rig or action library learns where a character came from.
+
+Backdrops are modelled the same way and kept deliberately separate: any character can
+perform against any backdrop, and neither knows about the other.
 
 ### 3.4 Action tracks
 
@@ -380,8 +383,8 @@ PuppetMaster/
 ├── scripts/check-core-purity.sh      # fails the build if Core/ imports a framework
 ├── docs/
 │   ├── PROTOTYPE.md                  # what works, what is verified, what is not
-│   ├── OPEN-QUESTIONS.md
-│   └── ASSETS.md
+│   ├── CHARACTERS.md                 # how to add a cast member
+│   ├── OPEN-QUESTIONS.md · ASSETS.md
 ├── Config/Info.plist                 # scene manifest: app + external-display roles
 ├── PuppetMaster.xcodeproj
 │
@@ -391,35 +394,38 @@ PuppetMaster/
 │   │   ├── MainSceneDelegate.swift         # the phone
 │   │   ├── ExternalDisplaySceneDelegate.swift  # an audience-facing display
 │   │   ├── AppEnvironment.swift            # composition root; one engine, one clock
-│   │   ├── RootView.swift                  # picks a layout per mode
+│   │   ├── RootView.swift                  # layout per mode + AudienceStageView
 │   │   └── DuoRehearsalView.swift          # both surfaces, one phone
 │   │
 │   ├── Core/                          # pure Swift. No UIKit/SpriteKit/AVFoundation.
 │   │   ├── Model/
-│   │   │   ├── PuppetPose.swift            # the frame, as a value
-│   │   │   ├── PoseChannel (in PuppetPose) # 21 animatable channels
+│   │   │   ├── PuppetPose.swift            # the frame, as a value (21 channels)
+│   │   │   ├── CharacterDescriptor.swift   # a character, as nine groups of numbers
 │   │   │   ├── PuppetIntent.swift          # what a control surface can ask for
-│   │   │   ├── PuppetRenderer.swift        # how a surface receives frames
-│   │   │   ├── Expression.swift · PuppetAction.swift · Easing.swift
-│   │   │   └── CharacterDescriptor.swift   (planned — Moppet is hardcoded today)
+│   │   │   ├── PuppetRenderer.swift        # load / apply / fire
+│   │   │   └── Expression.swift · PuppetAction.swift · Easing.swift
+│   │   ├── Content/
+│   │   │   ├── CharacterLibrary.swift      # the cast of four
+│   │   │   └── Backdrop.swift              # four backdrops, independent of the cast
 │   │   └── Engine/
 │   │       ├── PuppetEngine.swift          # @MainActor @Observable, source of truth
 │   │       ├── PoseBlender.swift           # idle + expression + actions + live
-│   │       ├── IdleDriver.swift            # breathing, blinking, sway
+│   │       ├── IdleDriver.swift            # breathing, blinking, sway — per personality
 │   │       ├── ExpressionLayer.swift       # eases between held faces
 │   │       ├── ActionScheduler.swift       # overlapping one-shots
-│   │       └── ActionLibrary.swift         # the 7 authored performances
+│   │       └── ActionLibrary.swift         # the 12 authored performances
 │   │
 │   ├── Stage/
 │   │   ├── StageView.swift                 # SwiftUI shell + SpriteView + aim drag
 │   │   ├── PuppetScene.swift               # SKScene conforming to PuppetRenderer
-│   │   ├── MoppetRig.swift                 # the cut-out node hierarchy
-│   │   ├── MoppetPalette.swift · ParticleTextures.swift
-│   │   └── Backdrops/                      (planned)
+│   │   ├── PuppetRig.swift                 # one node hierarchy, any character
+│   │   ├── ParticleTextures.swift          # generated; SF Symbols as particles
+│   │   └── ColorSpec+UIKit.swift           # the only place Core colours meet UIKit
 │   │
 │   ├── Controls/
-│   │   ├── ControlsView.swift · AimPad.swift · TalkButton.swift · ModeSheet.swift
-│   │   └── SoundPad.swift                  (planned)
+│   │   ├── ControlsView.swift · AimPad.swift · TalkButton.swift
+│   │   ├── CastSheet.swift                 # who performs
+│   │   └── StageSheet.swift                # surfaces + backdrops
 │   │
 │   ├── Audio/
 │   │   ├── VoiceInput.swift                # picks mic or fallback
@@ -437,19 +443,20 @@ PuppetMaster/
 │   ├── Store/                              (planned — StoreKit 2)
 │   ├── Support/
 │   │   ├── EngineClock.swift               # CADisplayLink → engine.tick(delta:)
-│   │   ├── Haptics.swift · Theme.swift
+│   │   └── Haptics.swift · Theme.swift
 │   └── Resources/Assets.xcassets
 │
 └── PuppetMasterTests/
     ├── PoseBlenderTests.swift        # layering, settling, clamping, stalled frames
-    ├── ActionTrackTests.swift        # sampling, library sanity, cue firing
+    ├── ActionTrackTests.swift        # sampling, library sanity, cues, cast, backdrops
     └── VoiceAndDisplayTests.swift    # smoothing, babble, routing, engine fan-out
 ```
 
 **Why this shape:** `Core/` has no framework imports, so the fun part of the product —
 how the puppet moves — is testable in milliseconds with no simulator, screen or
-microphone. `Display/` is a single quarantined directory for the Duo question, and
-`DuoCapability.swift` is the only file a vendor SDK would touch.
+microphone. `Core/Content/` is where cast and staging live as data. `Display/` is a
+single quarantined directory for the Duo question, and `DuoCapability.swift` is the only
+file a vendor SDK would touch.
 
 ## 9. Testing and quality
 

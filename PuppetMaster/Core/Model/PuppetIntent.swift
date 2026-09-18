@@ -7,6 +7,7 @@ import Foundation
 /// different device*, from the stage: the engine cannot tell a local tap from a
 /// remote one, so a second surface needs no new engine code at all.
 public enum PuppetIntent: Sendable, Equatable {
+    case setCharacter(id: String)
     case setExpression(Expression)
     case perform(PuppetAction)
     case aim(x: Double, y: Double)   // normalised stage coordinates, -1…1

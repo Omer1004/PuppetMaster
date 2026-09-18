@@ -27,6 +27,11 @@ final class VoiceInput {
     /// Smoothed level for the talk button's meter.
     private(set) var displayLevel: Double = 0
 
+    /// What the user's finger is asking for, as distinct from what has actually
+     /// started. `beginTalking()` suspends on the permission prompt, and a release
+     /// during that suspension must not be lost — without this the puppet would carry
+     /// on talking after the button came up, with no way back.
+    @ObservationIgnored private var wantsToTalk = false
     @ObservationIgnored private let mic = MicAmplitudeSource()
     @ObservationIgnored private var silly = SillyVoiceDriver()
     @ObservationIgnored private var meterSmoother = Smoother(attack: 0.05, release: 0.18)
@@ -45,7 +50,8 @@ final class VoiceInput {
     /// Begin talking. Asks for the microphone the first time, and falls back to the
     /// silly voice rather than failing if that is refused.
     func beginTalking() async {
-        guard !isTalking else { return }
+        guard !wantsToTalk else { return }
+        wantsToTalk = true
 
         // No usable input? Go straight to the procedural voice, and do not pester the
         // user for a microphone permission we would not be able to use.
@@ -69,12 +75,23 @@ final class VoiceInput {
                 source = .silly
             }
         }
+        // The finger may have come up while we were waiting on the permission prompt
+        // or starting the audio engine. If so, honour that and unwind.
+        guard wantsToTalk else {
+            mic.stop()
+            return
+        }
+
         silly.reset()
         isTalking = true
     }
 
     func endTalking() {
-        guard isTalking else { return }
+        wantsToTalk = false
+        guard isTalking else {
+            mic.stop()   // may have started while a begin was still in flight
+            return
+        }
         isTalking = false
         mic.stop()
     }

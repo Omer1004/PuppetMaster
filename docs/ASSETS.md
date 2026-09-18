@@ -10,7 +10,17 @@ of this project** — start commissioning at the beginning of Phase 1, not the e
 
 ---
 
-## 1. Character art — Moppet
+## 1. Character art
+
+The prototype ships **four** characters (Moppet, Pip, Bramble, Thistle) drawn
+procedurally from a `CharacterDescriptor`. That proves the rig and the pipeline; it is
+not shippable art. Each character below needs the full cut-out treatment.
+
+Budget for the lead first. A second character is worth commissioning only once the
+first has been through a full rig-and-animate cycle, so the brief for the rest can
+incorporate what was learned.
+
+### Per character — Moppet shown as the template
 
 The character is delivered as a **cut-out rig**: separate flat layers, each with a
 defined pivot, exported at @1x/@2x/@3x into a texture atlas.
@@ -35,7 +45,9 @@ defined pivot, exported at @1x/@2x/@3x into a texture atlas.
 - Turnaround / model sheet (front, 3/4, expression grid) — the reference document
 - Expression reference sheet: Neutral, Happy, Surprised, Silly
 - Thumbnail portrait for the character picker and store listing
-- Character brief document → `docs/art/moppet-brief.md`
+- Character brief document per character → `docs/art/<name>-brief.md`
+- Crest variants: tuft, ears, antenna, spikes — the species marker, and the
+  cheapest way to keep characters from reading as recolours of each other
 
 **Format:** layered source (PSD/Procreate/Figma) **plus** exported transparent PNGs,
 consistent canvas, pivots marked. Keep the layered source in the repo or in a linked
@@ -49,7 +61,7 @@ asset store — re-exports will be needed many times.
 |---|---|
 | App icon | All required sizes. **Ship a 1024×1024 master.** Must read at 60 px — a single Moppet face, not a scene |
 | Control iconography | Expressions, actions, talk, sound, settings. One consistent style |
-| Backdrops ×2 (MVP) | Simple, low-contrast, must never compete with the puppet. Parallax-capable layers are a bonus |
+| Backdrops ×4 | Sunset, Meadow, Midnight (star field), Showtime. Simple, low-contrast, must never compete with the puppet. Parallax-capable layers are a bonus |
 | Onboarding coach card | Single illustration + short copy |
 | Paywall art | Cast lineup shot, for later |
 | Empty/error states | Mic denied, peer disconnected, display lost |

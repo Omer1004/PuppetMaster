@@ -126,9 +126,23 @@ App Store titles before committing.*
 
 ---
 
-## 6. First character
+## 6. The cast
 
-### Moppet
+Four characters ship in the prototype. All are original designs; all use the same rig
+and the same repertoire, and differ in proportion and — far more importantly — in
+**timing**. Pip breathes twice as fast as Bramble and blinks four times as often, which
+does more for the character than any amount of silhouette work.
+
+| | Reads as | Distinguishing trait |
+|---|---|---|
+| **Moppet** | Steady, warm, unbothered | Mismatched button eyes; orange tuft |
+| **Pip** | Excitable, never settles | Huge eyes, bobbing antenna, 2.1s breath |
+| **Bramble** | Slow, deadpan | Heavy lids that never fully open; long swinging ears |
+| **Thistle** | Fidgety, up to something | Very wide mouth; spiky crest; constant sway |
+
+See [docs/CHARACTERS.md](docs/CHARACTERS.md) for how to add the next one.
+
+### Moppet — the lead
 
 A shaggy, lopsided sock-creature. Deep teal fur with a lighter belly patch.
 Mismatched button eyes — one large, one small — which makes every expression read
@@ -152,9 +166,12 @@ rig, and the whole character is buildable as ~10 flat cut-out parts.
 | | Description |
 |---|---|
 | **Neutral** | Default. Soft mouth, relaxed eyes. |
-| **Happy** | Eyes curve up, mouth corners lift, ears/tuft perk. |
-| **Surprised** | Both eyes go wide and equal-sized, mouth rounds, body pulls back. |
-| **Silly** | One eye squints, tongue out the side, head tilts. |
+| **Happy** | Eyes curve up, mouth corners lift, crest perks. |
+| **Whoa** | Brows up, mouth rounds, body pulls back. |
+| **Silly** | Brow cocked, tongue out the side, head tilts. |
+| **Sad** | Inner brows up, gaze down, body sinks. The droop matters more than the frown. |
+| **Grumpy** | Brows down and angled in, mouth set, head turned away. |
+| **Sleepy** | Heavy lids, slow gaze, head tipped. Layers with a blink to close fully. |
 
 ### Actions (one-shot, layered over the current expression)
 | | Feel |
@@ -163,8 +180,13 @@ rig, and the whole character is buildable as ~10 flat cut-out parts.
 | **Laugh** | Whole body bounces, head tips back, mouth opens rhythmically. |
 | **Jump** | Squash, launch, squash. With a small dust puff. |
 | **Spin** | Fast horizontal whirl, ends with a dizzy wobble. |
-| **Nod / Shake** | Yes and no. Essential for the puppet to *converse*. |
+| **Yes / No** | Nod and shake. Essential for the puppet to *converse*. |
 | **Topple** | Falls over sideways, pauses, springs back up. Reliably funny. |
+| **Dance** | Weight shifts side to side, arms trading places, music notes. |
+| **Cheer** | Arms up, two bounces, confetti. |
+| **Sneeze** | Long wind-up, very short snap. All the comedy is in that ratio. |
+| **Peek** | Hides behind its arms, waits a beat too long, pops out. |
+| **Yawn** | Slow open, slow close, then a small shiver. Contagious if timed right. |
 
 ### Continuous drivers (always available, always layered)
 - **Talk** — microphone amplitude opens the jaw

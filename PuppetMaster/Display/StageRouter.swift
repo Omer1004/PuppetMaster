@@ -13,6 +13,10 @@ public final class StageRouter {
 
     public private(set) var mode: PresentationMode = .solo
 
+    /// Set once the user picks a mode by hand. After that the app stops second-guessing
+    /// them when hardware appears.
+    private var hasUserChosenMode = false
+
     /// Number of live external-display scenes. Maintained by
     /// ``ExternalDisplaySceneDelegate`` as the system connects and drops displays.
     public private(set) var externalSurfaceCount = 0
@@ -56,6 +60,7 @@ public final class StageRouter {
 
     public func select(_ mode: PresentationMode) {
         guard isAvailable(mode) else { return }
+        hasUserChosenMode = true
         self.mode = mode
     }
 
@@ -74,8 +79,9 @@ public final class StageRouter {
 
     func externalSurfaceConnected() {
         externalSurfaceCount += 1
-        // A display being plugged in is an unambiguous request to use it.
-        if mode == .solo || mode == .duoRehearsal { mode = .externalDisplay }
+        // Plugging in a display is an unambiguous request to use it — unless the user
+        // deliberately chose a mode, in which case overriding them is rude.
+        if mode == .solo, !hasUserChosenMode { mode = .externalDisplay }
     }
 
     func externalSurfaceDisconnected() {

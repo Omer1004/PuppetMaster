@@ -99,6 +99,8 @@ struct PuppetEngineTests {
     final class RecordingRenderer: PuppetRenderer {
         var poses: [PuppetPose] = []
         var effects: [PuppetEffect] = []
+        var loaded: [String] = []
+        func load(character: CharacterDescriptor) { loaded.append(character.id) }
         func apply(pose: PuppetPose) { poses.append(pose) }
         func fire(effect: PuppetEffect) { effects.append(effect) }
     }
@@ -140,6 +142,36 @@ struct PuppetEngineTests {
         engine.tick(delta: 1.0 / 60)
         #expect(renderer.poses.count == afterFirstFrame)
         #expect(engine.rendererCount == 0)
+    }
+
+    @Test("Switching character reloads every attached surface")
+    func castChangeReachesAllSurfaces() {
+        let engine = PuppetEngine()
+        let phone = RecordingRenderer()
+        let display = RecordingRenderer()
+        engine.addRenderer(phone)
+        engine.addRenderer(display)
+        #expect(phone.loaded == [CharacterLibrary.default.id])
+
+        engine.send(.setCharacter(id: CharacterLibrary.bramble.id))
+        #expect(engine.character.id == "bramble")
+        #expect(phone.loaded.last == "bramble")
+        #expect(display.loaded.last == "bramble", "a second surface must not keep the old cast")
+    }
+
+    @Test("Switching character cancels whatever the previous one was doing")
+    func castChangeCancelsActions() {
+        let engine = PuppetEngine()
+        engine.send(.perform(.topple))
+        #expect(!engine.activeActions.isEmpty)
+        engine.send(.setCharacter(id: CharacterLibrary.pip.id))
+        engine.tick(delta: 1.0 / 60)
+        #expect(engine.activeActions.isEmpty, "an in-flight action belongs to the old character")
+    }
+
+    @Test("An unknown character id falls back rather than failing")
+    func unknownCharacterFallsBack() {
+        #expect(CharacterLibrary.character(id: "nobody").id == CharacterLibrary.default.id)
     }
 
     @Test("Intents are the only way state changes")

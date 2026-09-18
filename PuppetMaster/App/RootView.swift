@@ -27,6 +27,7 @@ struct RootView: View {
                 ControlsView(engine: environment.engine,
                              voice: environment.voice,
                              router: environment.router,
+                             environment: environment,
                              includesAimPad: true)
             }
 
@@ -45,13 +46,14 @@ struct RootView: View {
     private var soloLayout: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
-                StageView(engine: environment.engine)
-                    .frame(height: geometry.size.height * 0.56)
+                StageView(engine: environment.engine, backdrop: environment.backdrop)
+                    .frame(height: geometry.size.height * 0.54)
                     .clipped()
 
                 ControlsView(engine: environment.engine,
                              voice: environment.voice,
-                             router: environment.router)
+                             router: environment.router,
+                             environment: environment)
             }
             .ignoresSafeArea(edges: .top)
         }
@@ -65,7 +67,9 @@ struct RootView: View {
             // needs to see what the audience sees — and it is a second live surface,
             // driven by the same engine and the same frame.
             ZStack(alignment: .topLeading) {
-                StageView(engine: environment.engine, isInteractive: false)
+                StageView(engine: environment.engine,
+                          backdrop: environment.backdrop,
+                          isInteractive: false)
                     .frame(height: 130)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
@@ -82,6 +86,7 @@ struct RootView: View {
             ControlsView(engine: environment.engine,
                          voice: environment.voice,
                          router: environment.router,
+                         environment: environment,
                          includesAimPad: true,
                          isCompact: true,
                          topInset: 8)
@@ -128,5 +133,21 @@ private struct CoachCard: View {
                 .frame(width: 26)
             Text(text).font(.system(size: 15))
         }
+    }
+}
+
+/// The audience-facing surface, as hosted on an external display.
+///
+/// A view rather than an inline `StageView` so that observation works: reading
+/// `environment.backdrop` inside `body` is what makes a backdrop change on the phone
+/// reach the screen across the room.
+struct AudienceStageView: View {
+    private let environment = AppEnvironment.shared
+
+    var body: some View {
+        StageView(engine: environment.engine,
+                  backdrop: environment.backdrop,
+                  isInteractive: false)
+            .ignoresSafeArea()
     }
 }

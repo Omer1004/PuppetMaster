@@ -3,10 +3,11 @@
 An iPhone app that turns the phone into a small digital puppet stage. One person
 drives an original animated character; someone else watches it perform.
 
-**Status: working prototype.** The app builds and runs on iOS, with an animated
-character, layered expressions and actions, voice-driven lip sync, and two independent
-display surfaces. 23 tests pass. The art is placeholder and several paths are still
-unverified — [docs/PROTOTYPE.md](docs/PROTOTYPE.md) is explicit about which.
+**Status: working prototype.** The app builds and runs on iOS with a cast of four
+characters, seven expressions, twelve actions, four backdrops, voice-driven lip sync,
+and two independent display surfaces. 31 tests pass. The art is placeholder and several
+paths are still unverified — [docs/PROTOTYPE.md](docs/PROTOTYPE.md) is explicit about
+which.
 
 ```bash
 open PuppetMaster.xcodeproj
@@ -24,6 +25,7 @@ open PuppetMaster.xcodeproj
 | **[docs/ASSETS.md](docs/ASSETS.md)** | Every asset to be created or commissioned |
 | **[docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md)** | Ten decisions needed before implementation |
 | **[docs/PROTOTYPE.md](docs/PROTOTYPE.md)** | What the prototype does, what is verified, and what is not |
+| **[docs/CHARACTERS.md](docs/CHARACTERS.md)** | How to add a character — and why timing matters more than shape |
 
 ### Where each requested deliverable lives
 
@@ -46,8 +48,11 @@ open PuppetMaster.xcodeproj
 
 - **Product:** a live performance toy, not an animation editor. Immediate, expressive,
   understandable in seconds.
-- **Character:** *Moppet* — an original shaggy sock-creature with mismatched button
-  eyes and a mouth that moves with your voice. Working name, not yet cleared.
+- **Cast:** four original creatures — *Moppet* (steady), *Pip* (excitable), *Bramble*
+  (deadpan) and *Thistle* (trouble). One rig, one set of moves; what differs is the
+  proportions and, mostly, the timing. Working names, not yet cleared.
+- **Characters are data.** Adding one is a value in a library file — no views, no
+  actions, no renderer work. See [docs/CHARACTERS.md](docs/CHARACTERS.md).
 - **Tech:** Swift · SwiftUI · SpriteKit for the stage · AVFoundation for voice ·
   **zero third-party dependencies** · no backend.
 - **Duo:** stage and controls are genuinely independent surfaces driven by one engine.

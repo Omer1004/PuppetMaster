@@ -9,6 +9,7 @@ import SpriteKit
 struct StageView: View {
 
     let engine: PuppetEngine
+    var backdrop: Backdrop = BackdropLibrary.default
     /// False for an audience-facing surface: the stage on a TV is not a control.
     var isInteractive: Bool = true
 
@@ -28,8 +29,12 @@ struct StageView: View {
                     ? "Drag anywhere to make Moppet look that way."
                     : "Shows the puppet performance.")
         }
-        .onAppear { engine.addRenderer(scene) }
+        .onAppear {
+            scene.setBackdrop(backdrop)
+            engine.addRenderer(scene)
+        }
         .onDisappear { engine.removeRenderer(scene) }
+        .onChange(of: backdrop) { _, new in scene.setBackdrop(new) }
     }
 
     private func aimGesture(in size: CGSize) -> some Gesture {

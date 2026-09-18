@@ -4,6 +4,7 @@ import Foundation
 /// on top of whatever expression is held and whatever the microphone is doing.
 public enum PuppetAction: String, CaseIterable, Identifiable, Sendable, Codable {
     case wave, laugh, jump, spin, nod, shake, topple
+    case dance, cheer, sneeze, peek, stretch
 
     public var id: String { rawValue }
 
@@ -16,6 +17,11 @@ public enum PuppetAction: String, CaseIterable, Identifiable, Sendable, Codable 
         case .nod:    "Yes"
         case .shake:  "No"
         case .topple: "Topple"
+        case .dance:  "Dance"
+        case .cheer:  "Cheer"
+        case .sneeze: "Sneeze"
+        case .peek:   "Peek"
+        case .stretch: "Yawn"
         }
     }
 
@@ -28,6 +34,11 @@ public enum PuppetAction: String, CaseIterable, Identifiable, Sendable, Codable 
         case .nod:    "checkmark.circle.fill"
         case .shake:  "xmark.circle.fill"
         case .topple: "tornado"
+        case .dance:  "music.note"
+        case .cheer:  "party.popper.fill"
+        case .sneeze: "wind"
+        case .peek:   "eye.slash.fill"
+        case .stretch: "zzz"
         }
     }
 }

@@ -16,10 +16,15 @@ final class AppEnvironment {
     let router = StageRouter()
     let voice = VoiceInput()
 
+    /// Where the puppet performs. Kept here rather than on the engine because it is
+    /// staging, not behaviour — any character can play against any backdrop.
+    private(set) var backdrop: Backdrop = BackdropLibrary.default
+
     @ObservationIgnored private var clock: EngineClock?
     @ObservationIgnored private var reduceMotionObserver: (any NSObjectProtocol)?
 
     private init() {
+        restoreChoices()
         clock = EngineClock { [weak self] delta in self?.frame(delta) }
         applyReduceMotion()
         reduceMotionObserver = NotificationCenter.default.addObserver(
@@ -35,6 +40,38 @@ final class AppEnvironment {
         engine.send(.setJawDrive(voice.level(delta: delta)))
         engine.tick(delta: delta)
     }
+
+    // MARK: Cast and staging
+
+    func selectCharacter(id: String) {
+        engine.send(.setCharacter(id: id))
+        defaults.set(id, forKey: Key.character)
+    }
+
+    func selectBackdrop(_ backdrop: Backdrop) {
+        guard backdrop != self.backdrop else { return }
+        self.backdrop = backdrop
+        defaults.set(backdrop.id, forKey: Key.backdrop)
+    }
+
+    /// Bring back whatever the user was last performing with. Losing your character on
+    /// every launch would be a small betrayal every time.
+    private func restoreChoices() {
+        if let id = defaults.string(forKey: Key.character) {
+            engine.send(.setCharacter(id: id))
+        }
+        if let id = defaults.string(forKey: Key.backdrop) {
+            backdrop = BackdropLibrary.backdrop(id: id)
+        }
+    }
+
+    @ObservationIgnored private let defaults = UserDefaults.standard
+    private enum Key {
+        static let character = "selectedCharacter"
+        static let backdrop = "selectedBackdrop"
+    }
+
+    // MARK: Clock
 
     func startClock() { clock?.start() }
     func stopClock() { clock?.stop() }

@@ -9,10 +9,11 @@
 ### 1.1 Must have — MVP ships without exception
 
 **Character and animation**
-- One finished, original character (Moppet) with production art
-- Idle life: breathing, blinking, micro-sway — always running, never off
-- 4 expressions: Neutral, Happy, Surprised, Silly
-- 6 actions: Wave, Laugh, Jump, Spin, Nod/Shake, Topple
+- One finished, original character with production art *(prototype has four, in
+  placeholder art)*
+- Idle life: breathing, blinking, micro-sway — always running, never off ✅
+- 4 expressions minimum *(prototype has seven)* ✅
+- 6 actions minimum *(prototype has twelve)* ✅
 - Layered pose blending so expression + action + talk coexist
 - Look/aim: drag on the stage to point head and eyes
 
@@ -45,7 +46,6 @@
   but gated on the Phase 0 spike; do not commit it to scope before that spike lands*
 - **Two Devices mode** (MultipeerConnectivity) — *high architectural value: it is the
   only way to prove the stage/controls split before Duo hardware exists*
-- Second character
 - Record a 30-second performance and export to Photos (ReplayKit)
 - 2 more backdrops, seasonal sound pack
 - "Puppet repeats you": buffer the held-talk audio and replay it pitch-shifted
@@ -76,10 +76,13 @@ real estimates once Phase 0 tells us what we are actually building.
 ### Phase 0 — Prototype *(~1–2 weeks)* — **mostly built**
 **Question it answers: is this actually fun? — still unanswered.**
 
-The app exists and runs ([docs/PROTOTYPE.md](docs/PROTOTYPE.md)). What is still owed
-from this phase: the renderer bake-off, the external-display spike against real
-hardware, the microphone tested on a device, and — the actual gate — putting it in
-front of children.
+The app exists and runs ([docs/PROTOTYPE.md](docs/PROTOTYPE.md)), now with a cast of
+four, seven expressions, twelve actions and four backdrops. Characters are data, which
+was a Phase 1 goal pulled forward because it made adding the cast almost free.
+
+What is still owed from this phase: the renderer bake-off, the external-display spike
+against real hardware, the microphone tested on a device, and — the actual gate —
+putting it in front of children.
 
 - Throwaway placeholder art — deliberately ugly, so nobody falls in love with it
 - `PuppetPose` + `PuppetEngine` + `PoseBlender` + idle driver, for real (this code survives)

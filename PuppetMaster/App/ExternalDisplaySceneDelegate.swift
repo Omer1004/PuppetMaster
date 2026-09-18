@@ -24,8 +24,7 @@ final class ExternalDisplaySceneDelegate: UIResponder, UIWindowSceneDelegate {
             let window = UIWindow(windowScene: windowScene)
             // Stage only, and explicitly not interactive: nothing on the audience's
             // screen is a control.
-            let stage = StageView(engine: environment.engine, isInteractive: false)
-            window.rootViewController = UIHostingController(rootView: stage)
+            window.rootViewController = UIHostingController(rootView: AudienceStageView())
             window.isHidden = false
             self.window = window
 

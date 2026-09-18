@@ -18,27 +18,54 @@ enum Theme {
     static let corner: CGFloat = 18
 }
 
+/// A small pill used for the character and stage-mode buttons in the header.
+struct HeaderChip: View {
+    let symbol: String
+    let title: String
+    var tint: Color = Theme.label
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: symbol)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(tint)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(Capsule().fill(Theme.panelRaised))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 /// A control-panel button: large, tactile, and obvious whether it is on.
 struct PadButton: View {
     let symbol: String
     let title: String
     var isSelected: Bool = false
     var isBusy: Bool = false
+    /// Shrunk when the controls are sharing a screen with the stage.
+    var compact: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 5) {
+            VStack(spacing: compact ? 3 : 5) {
                 Image(systemName: symbol)
-                    .font(.system(size: 21, weight: .semibold))
+                    .font(.system(size: compact ? 18 : 21, weight: .semibold))
                     .symbolRenderingMode(.hierarchical)
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: compact ? 10 : 11, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: Theme.touchTarget + 8)
+            .frame(height: compact ? 52 : Theme.touchTarget + 8)
             .foregroundStyle(isSelected ? Color.black : Theme.label)
             .background(
                 RoundedRectangle(cornerRadius: Theme.corner, style: .continuous)

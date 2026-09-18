@@ -16,6 +16,7 @@ public final class PuppetEngine: IntentSink {
 
     // MARK: Observed state (read by control surfaces)
 
+    public private(set) var character: CharacterDescriptor = CharacterLibrary.default
     public private(set) var expression: Expression = .neutral
     public private(set) var activeActions: Set<PuppetAction> = []
     public private(set) var isMicEnabled = false
@@ -32,7 +33,9 @@ public final class PuppetEngine: IntentSink {
     @ObservationIgnored private var blender = PoseBlender()
     @ObservationIgnored private var renderers: [WeakRenderer] = []
 
-    public init() {}
+    public init() {
+        blender.idle.adopt(character.personality)
+    }
 
     // MARK: Renderers
 
@@ -40,6 +43,7 @@ public final class PuppetEngine: IntentSink {
         renderers.removeAll { $0.value == nil }
         guard !renderers.contains(where: { $0.value === renderer }) else { return }
         renderers.append(WeakRenderer(renderer))
+        renderer.load(character: character)
         renderer.apply(pose: pose)   // a surface must never appear blank for a frame
     }
 
@@ -75,6 +79,20 @@ public final class PuppetEngine: IntentSink {
 
     public func send(_ intent: PuppetIntent) {
         switch intent {
+        case .setCharacter(let id):
+            let next = CharacterLibrary.character(id: id)
+            guard next.id != character.id else { return }
+            character = next
+            // Personality lives in the idle layer, so swapping the cast changes how the
+            // puppet breathes and blinks, not just how it looks.
+            blender.idle.adopt(next.personality)
+            // An in-flight action belongs to the character that started it.
+            blender.actions.cancelAll()
+            for renderer in renderers.compactMap(\.value) {
+                renderer.load(character: next)
+                renderer.apply(pose: pose)
+            }
+
         case .setExpression(let expression):
             guard expression != self.expression else { return }
             self.expression = expression

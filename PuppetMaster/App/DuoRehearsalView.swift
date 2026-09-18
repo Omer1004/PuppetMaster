@@ -45,7 +45,9 @@ struct DuoRehearsalView: View {
     private var stagePanel: some View {
         panel(label: "Outer screen · audience", symbol: "person.2.fill") {
             // Not interactive: on real hardware the audience side is facing away.
-            StageView(engine: environment.engine, isInteractive: false)
+            StageView(engine: environment.engine,
+                      backdrop: environment.backdrop,
+                      isInteractive: false)
         }
     }
 
@@ -54,6 +56,7 @@ struct DuoRehearsalView: View {
             ControlsView(engine: environment.engine,
                          voice: environment.voice,
                          router: environment.router,
+                         environment: environment,
                          includesAimPad: true,
                          isCompact: true,
                          topInset: 30)   // clears the surface badge
