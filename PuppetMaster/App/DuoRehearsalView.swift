@@ -36,7 +36,7 @@ struct DuoRehearsalView: View {
         }
         .overlay(alignment: .bottom) {
             Text("Approximate layout — real dimensions come from the device SDK")
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(.caption2).weight(.medium))
                 .foregroundStyle(Theme.labelDim)
                 .padding(.bottom, 2)
         }
@@ -71,7 +71,7 @@ struct DuoRehearsalView: View {
                     .strokeBorder(Color.white.opacity(0.12), lineWidth: 1))
             .overlay(alignment: .topLeading) {
                 Label(label, systemImage: symbol)
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(.caption2).weight(.bold))
                     .padding(.horizontal, 7).padding(.vertical, 3)
                     .background(Capsule().fill(.black.opacity(0.6)))
                     .foregroundStyle(.white.opacity(0.9))

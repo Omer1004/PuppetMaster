@@ -47,17 +47,41 @@ struct RootView: View {
 
     private var soloLayout: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
-                StageView(troupe: environment.troupe)
-                    .frame(height: geometry.size.height * 0.54)
-                    .clipped()
+            let layout = StageLayout.forSurface(width: geometry.size.width,
+                                                height: geometry.size.height)
 
-                ControlsView(engine: environment.engine,
-                             voice: environment.voice,
-                             router: environment.router,
-                             environment: environment)
+            if layout.isSideBySide {
+                // Landscape. The stage keeps the side the safe area is least likely to
+                // eat into, and the controls get the aim pad: in this orientation the
+                // stage is across the screen from your thumbs, so dragging on it to
+                // look around is no longer the comfortable gesture it is in portrait.
+                HStack(spacing: 0) {
+                    StageView(troupe: environment.troupe)
+                        .frame(width: geometry.size.width * layout.fraction)
+                        .clipped()
+
+                    ControlsView(engine: environment.engine,
+                                 voice: environment.voice,
+                                 router: environment.router,
+                                 environment: environment,
+                                 includesAimPad: true,
+                                 isCompact: true,
+                                 topInset: 8)
+                }
+                .ignoresSafeArea(edges: .leading)
+            } else {
+                VStack(spacing: 0) {
+                    StageView(troupe: environment.troupe)
+                        .frame(height: geometry.size.height * layout.fraction)
+                        .clipped()
+
+                    ControlsView(engine: environment.engine,
+                                 voice: environment.voice,
+                                 router: environment.router,
+                                 environment: environment)
+                }
+                .ignoresSafeArea(edges: .top)
             }
-            .ignoresSafeArea(edges: .top)
         }
     }
 
@@ -74,7 +98,7 @@ struct RootView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 Label("On the big screen", systemImage: "tv")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(.caption2).weight(.bold))
                     .padding(.horizontal, 8).padding(.vertical, 4)
                     .background(Capsule().fill(.black.opacity(0.55)))
                     .foregroundStyle(.white)
@@ -99,25 +123,21 @@ private struct CoachCard: View {
     let characterName: String
     let dismiss: () -> Void
 
+    @ScaledMetric(relativeTo: .body) private var rowIconWidth: CGFloat = 26
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.55).ignoresSafeArea()
 
-            VStack(spacing: 14) {
-                Text("Meet \(characterName)")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                VStack(alignment: .leading, spacing: 10) {
-                    row("hand.tap.fill", "Tap a button to make \(characterName) move.")
-                    row("mic.fill", "Hold Talk and its mouth follows your voice.")
-                    row("hand.draw.fill", "Drag on the stage to make it look around.")
-                }
-                Text("Tap anywhere to start")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.labelDim)
-                    .padding(.top, 4)
+            // The card keeps its natural size until it no longer fits, and only then
+            // starts scrolling. At the largest accessibility text sizes three sentences
+            // are taller than the phone, and a first-run card you cannot read all of is
+            // worse than no card at all.
+            ViewThatFits(in: .vertical) {
+                card
+                ScrollView { card }.scrollBounceBehavior(.basedOnSize)
             }
             .foregroundStyle(Theme.label)
-            .padding(28)
             .background(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(Theme.panel))
             .padding(28)
         }
@@ -126,13 +146,31 @@ private struct CoachCard: View {
         .accessibilityAddTraits(.isModal)
     }
 
+    private var card: some View {
+        VStack(spacing: 14) {
+            Text("Meet \(characterName)")
+                .font(.system(.title, design: .rounded).weight(.bold))
+                .multilineTextAlignment(.center)
+            VStack(alignment: .leading, spacing: 10) {
+                row("hand.tap.fill", "Tap a button to make \(characterName) move.")
+                row("mic.fill", "Hold Talk and its mouth follows your voice.")
+                row("hand.draw.fill", "Drag on the stage to make it look around.")
+            }
+            Text("Tap anywhere to start")
+                .font(.system(.footnote).weight(.semibold))
+                .foregroundStyle(Theme.labelDim)
+                .padding(.top, 4)
+        }
+        .padding(28)
+    }
+
     private func row(_ symbol: String, _ text: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: symbol)
-                .font(.system(size: 17))
+                .font(.system(.body))
                 .foregroundStyle(Theme.accent)
-                .frame(width: 26)
-            Text(text).font(.system(size: 15))
+                .frame(width: rowIconWidth)
+            Text(text).font(.system(.subheadline))
         }
     }
 }

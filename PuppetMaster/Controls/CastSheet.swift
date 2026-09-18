@@ -86,9 +86,9 @@ struct CastSheet: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(character.name)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(.callout).weight(.semibold))
                     Text(character.tagline)
-                        .font(.system(size: 12))
+                        .font(.system(.caption))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -97,7 +97,7 @@ struct CastSheet: View {
 
                 if engine.character.id == character.id {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(.footnote).weight(.bold))
                         .foregroundStyle(Theme.accent)
                 }
             }

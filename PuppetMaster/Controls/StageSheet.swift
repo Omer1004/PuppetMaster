@@ -70,15 +70,15 @@ struct StageSheet: View {
         } label: {
             HStack(spacing: 14) {
                 Image(systemName: mode.symbol)
-                    .font(.system(size: 20))
+                    .font(.system(.title3))
                     .frame(width: 30)
                     .foregroundStyle(available ? Theme.accent : .secondary)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(mode.title)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(.callout).weight(.semibold))
                     Text(router.unavailableReason(for: mode) ?? mode.subtitle)
-                        .font(.system(size: 12))
+                        .font(.system(.caption))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -87,7 +87,7 @@ struct StageSheet: View {
 
                 if router.mode == mode {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(.footnote).weight(.bold))
                         .foregroundStyle(Theme.accent)
                 }
             }
@@ -119,14 +119,14 @@ struct StageSheet: View {
                     .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
 
                 Label(backdrop.name, systemImage: backdrop.symbol)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(.callout).weight(.semibold))
                     .labelStyle(.titleOnly)
 
                 Spacer()
 
                 if environment.backdrop.id == backdrop.id {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(.footnote).weight(.bold))
                         .foregroundStyle(Theme.accent)
                 }
             }

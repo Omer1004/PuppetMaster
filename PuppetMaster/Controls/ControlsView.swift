@@ -24,8 +24,13 @@ struct ControlsView: View {
     @State private var showingStage = false
     @State private var showingCast = false
 
+    // Grid columns and the expression row widen with the text size, so a large-text
+    // user gets three columns of readable labels instead of five truncated ones.
+    @ScaledMetric(relativeTo: .caption2) private var columnMinimum: CGFloat = 74
+    @ScaledMetric(relativeTo: .caption2) private var expressionWidth: CGFloat = 78
+
     private var actionColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: isCompact ? 66 : 74), spacing: 8)]
+        [GridItem(.adaptive(minimum: isCompact ? columnMinimum * 0.89 : columnMinimum), spacing: 8)]
     }
 
     var body: some View {
@@ -56,7 +61,7 @@ struct ControlsView: View {
                         // unprompted, and this band would otherwise be dead space.
                         Label("Drag on the stage to make \(engine.character.name) look around",
                               systemImage: "hand.draw.fill")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(.caption).weight(.medium))
                             .foregroundStyle(Theme.labelDim)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
@@ -99,7 +104,7 @@ struct ControlsView: View {
                     Haptics.expressionChanged()
                 } label: {
                     Image(systemName: "arrow.left.arrow.right")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(.caption).weight(.bold))
                         .foregroundStyle(Theme.label)
                         .padding(.horizontal, 9).padding(.vertical, 7)
                         .background(Capsule().fill(Theme.panelRaised))
@@ -112,7 +117,7 @@ struct ControlsView: View {
             // Honest, visible proof that several surfaces are being driven at once.
             if engine.rendererCount > 1 {
                 Label("\(engine.rendererCount)", systemImage: "rectangle.on.rectangle")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(.caption2).weight(.semibold))
                     .foregroundStyle(Theme.accent)
                     .padding(.horizontal, 7).padding(.vertical, 5)
                     .background(Capsule().fill(Theme.accent.opacity(0.15)))
@@ -142,7 +147,7 @@ struct ControlsView: View {
                         engine.send(.setExpression(expression))
                         Haptics.expressionChanged()
                     }
-                    .frame(width: isCompact ? 70 : 78)
+                    .frame(width: isCompact ? expressionWidth * 0.90 : expressionWidth)
                 }
             }
             .padding(.horizontal, 1)

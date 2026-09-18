@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Apple requires this manifest for App Store submission. Every claim below is
+	     checked against the code, not aspirational: if any of it stops being true,
+	     this file is wrong and the submission is a misrepresentation.
+
+	     Verified 2026-09-19 by grepping the whole target for the required-reason API
+	     families. The only one present is UserDefaults. -->
+
+	<!-- No tracking, no ad identifiers, no third-party SDKs of any kind. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!-- Nothing is collected. The app has no backend, no analytics, and makes no
+	     network requests. Microphone audio is measured for loudness in memory and
+	     discarded frame by frame: it is never written to disk and never transmitted,
+	     so under Apple's definition it is not "collected". -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- @AppStorage("hasSeenCoachCard") in App/RootView.swift and the
+			     UserDefaults.standard in App/AppEnvironment.swift, which remember
+			     the chosen characters, the backdrop and the duet toggle. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- CA92.1: access to user defaults to read and write information
+				     only accessible to this app itself. No app group, no shared
+				     container, no other process reads these keys. -->
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

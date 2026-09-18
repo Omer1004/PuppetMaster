@@ -11,6 +11,7 @@ struct TalkButton: View {
     @Bindable var voice: VoiceInput
 
     @State private var isPressed = false
+    @ScaledMetric(relativeTo: .callout) private var barHeight: CGFloat = Theme.touchTarget
 
     var body: some View {
         GeometryReader { geometry in
@@ -25,9 +26,9 @@ struct TalkButton: View {
 
                 HStack(spacing: 9) {
                     Image(systemName: voice.talkButtonSymbol)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(.title3).weight(.semibold))
                     Text(voice.talkButtonTitle)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(.callout).weight(.semibold))
                 }
                 .foregroundStyle(Theme.label)
                 .frame(maxWidth: .infinity)
@@ -54,7 +55,7 @@ struct TalkButton: View {
                     }
             )
         }
-        .frame(height: Theme.touchTarget)
+        .frame(height: barHeight)
         .accessibilityElement()
         .accessibilityLabel(voice.talkButtonTitle)
         .accessibilityHint("Touch and hold. \(characterName)'s mouth follows your voice.")

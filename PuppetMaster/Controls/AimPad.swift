@@ -36,9 +36,9 @@ struct AimPad: View {
                 } else {
                     VStack(spacing: 4) {
                         Image(systemName: "eye")
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(.system(.body).weight(.semibold))
                         Text("Look")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(.caption2).weight(.semibold))
                     }
                     .foregroundStyle(Theme.labelDim)
                     .allowsHitTesting(false)

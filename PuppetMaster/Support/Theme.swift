@@ -29,10 +29,11 @@ struct HeaderChip: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: symbol)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(.footnote, design: .rounded).weight(.semibold))
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(.footnote, design: .rounded).weight(.semibold))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .foregroundStyle(tint)
             .padding(.horizontal, 11)
@@ -53,19 +54,24 @@ struct PadButton: View {
     var compact: Bool = false
     let action: () -> Void
 
+    // The tile has to grow with the label, or the label is what gives. These track
+    // .caption2 because that is the style the one-word title uses.
+    @ScaledMetric(relativeTo: .caption2) private var tileHeight: CGFloat = Theme.touchTarget + 8
+    @ScaledMetric(relativeTo: .caption2) private var symbolSize: CGFloat = 21
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: compact ? 3 : 5) {
                 Image(systemName: symbol)
-                    .font(.system(size: compact ? 18 : 21, weight: .semibold))
+                    .font(.system(size: compact ? symbolSize * 0.86 : symbolSize, weight: .semibold))
                     .symbolRenderingMode(.hierarchical)
                 Text(title)
-                    .font(.system(size: compact ? 10 : 11, weight: .semibold))
+                    .font(.system(.caption2).weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: compact ? 52 : Theme.touchTarget + 8)
+            .frame(height: compact ? tileHeight * 0.81 : tileHeight)
             .foregroundStyle(isSelected ? Color.black : Theme.label)
             .background(
                 RoundedRectangle(cornerRadius: Theme.corner, style: .continuous)

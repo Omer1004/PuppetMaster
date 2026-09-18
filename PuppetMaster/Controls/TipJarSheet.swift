@@ -46,16 +46,16 @@ struct TipJarSheet: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(tip.displayName)
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(.callout).weight(.semibold))
                                 if !tip.description.isEmpty {
                                     Text(tip.description)
-                                        .font(.system(size: 12))
+                                        .font(.system(.caption))
                                         .foregroundStyle(.secondary)
                                 }
                             }
                             Spacer()
                             Text(tip.displayPrice)
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(.subheadline).weight(.semibold))
                                 .foregroundStyle(Theme.accent)
                         }
                         .contentShape(Rectangle())
