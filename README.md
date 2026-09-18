@@ -3,8 +3,14 @@
 An iPhone app that turns the phone into a small digital puppet stage. One person
 drives an original animated character; someone else watches it perform.
 
-**Status: planning.** No application code yet — this repository currently contains
-the product and technical plan.
+**Status: working prototype.** The app builds and runs on iOS, with an animated
+character, layered expressions and actions, voice-driven lip sync, and two independent
+display surfaces. 23 tests pass. The art is placeholder and several paths are still
+unverified — [docs/PROTOTYPE.md](docs/PROTOTYPE.md) is explicit about which.
+
+```bash
+open PuppetMaster.xcodeproj
+```
 
 ---
 
@@ -17,6 +23,7 @@ the product and technical plan.
 | **[ROADMAP.md](ROADMAP.md)** | Must-have / nice-to-have / later · staged plan from prototype to release |
 | **[docs/ASSETS.md](docs/ASSETS.md)** | Every asset to be created or commissioned |
 | **[docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md)** | Ten decisions needed before implementation |
+| **[docs/PROTOTYPE.md](docs/PROTOTYPE.md)** | What the prototype does, what is verified, and what is not |
 
 ### Where each requested deliverable lives
 
@@ -43,11 +50,13 @@ the product and technical plan.
   eyes and a mouth that moves with your voice. Working name, not yet cleared.
 - **Tech:** Swift · SwiftUI · SpriteKit for the stage · AVFoundation for voice ·
   **zero third-party dependencies** · no backend.
-- **Duo:** the app is split into an independent *stage* and *controls* over one shared
-  engine from day one. **No Duo-specific API is assumed or written** until an SDK
-  exists. Two-devices mode on ordinary iPhones is how we prove the split early.
-- **Next step:** answer [the open questions](docs/OPEN-QUESTIONS.md), then run Phase 0
-  — a throwaway prototype that answers one thing: *is this fun?*
+- **Duo:** stage and controls are genuinely independent surfaces driven by one engine.
+  **Duo Rehearsal runs both at once today**, on the same code path a two-screen device
+  would use, and an external display already gets a chrome-free stage through the
+  standard scene role. **No Duo-specific API is assumed or written** — the vendor seam
+  is one protocol with one honest "not available yet" implementation.
+- **Next step:** run it on a real device and test the microphone (the Simulator cannot),
+  then put it in front of children. Phase 0's exit gate is whether they laugh.
 
 ## Toolchain
 

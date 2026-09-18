@@ -1,6 +1,7 @@
 # Puppet Master — Technical Architecture
 
-**Status:** Proposal v0.1 · Pre-implementation
+**Status:** v0.2 · Largely implemented — see [docs/PROTOTYPE.md](docs/PROTOTYPE.md)
+for exactly what is built, verified, and still outstanding
 **Toolchain (verified on this machine):** Xcode 27.0, Swift 6.4, iOS 27.0 SDK
 **Proposed deployment target:** iOS 26.0 — see [OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md) Q8
 
@@ -288,17 +289,21 @@ and are never aware of which presenter mounted them.
 | `PeerDevicePresenter` | `.stage` + `.controls` | MultipeerConnectivity, intents over the wire | Post-MVP |
 | `DuoPresenter` | `.stage` + `.controls` | **Unknown. Not written until an SDK exists.** | Blocked |
 
-### 6.3 ⚠️ Spike: external display
+### 6.3 External display — partly resolved
 
-Current iOS attaches an external display as a separate window scene with the
-`externalDisplayNonInteractive` session role, configured in the app's scene manifest.
-How cleanly that composes with a SwiftUI-lifecycle app — and whether we need a UIKit
-`UIWindowSceneDelegate` alongside it — is **unverified**. Time-box a spike in Phase 0
-before Big Screen mode is committed to MVP scope. If it proves awkward, AirPlay
-mirroring with a role-aware layout is the fallback, and `PeerDevicePresenter` becomes
-the real answer.
+**Answered:** a SwiftUI-lifecycle app does *not* compose cleanly with multiple scene
+roles, so the app uses the **UIKit lifecycle** (`AppDelegate` + scene delegates) and
+hosts SwiftUI inside each scene via `UIHostingController`. Every view is still SwiftUI;
+only the scene plumbing is UIKit. `Info.plist` declares both the application role and
+`UIWindowSceneSessionRoleExternalDisplayNonInteractive`, and
+`ExternalDisplaySceneDelegate` mounts a chrome-free `StageView` on the connected
+display while the phone keeps the controls plus a confidence monitor.
 
-### 6.4 ⚠️ Duo: what we will and will not do
+**Still open ⚠️:** none of this has run against a real display. The code path is
+written and wired but unexercised. Until someone plugs a display in, Big Screen stays
+out of committed scope.
+
+### 6.4 Duo: what we will and will not do
 
 **Will:** keep Stage and Controls independently renderable; ship Two Devices mode so
 that separation is exercised by real users on real hardware; keep all presenter
@@ -363,119 +368,88 @@ cost of doing so is roughly two days.
 
 ---
 
-## 8. Proposed repository structure
+## 8. Repository structure
+
+As built. `(planned)` marks files described above that do not exist yet — see
+[docs/PROTOTYPE.md](docs/PROTOTYPE.md).
 
 ```
 PuppetMaster/
-├── README.md
-├── PRD.md
-├── ARCHITECTURE.md
-├── ROADMAP.md
-├── LICENSE
-├── .gitignore
-├── .github/
-│   └── workflows/ci.yml            # build + test on PR
-│
+├── README.md · PRD.md · ARCHITECTURE.md · ROADMAP.md · .gitignore
+├── .github/workflows/ci.yml          # build + test + Core purity (never run yet)
+├── scripts/check-core-purity.sh      # fails the build if Core/ imports a framework
 ├── docs/
+│   ├── PROTOTYPE.md                  # what works, what is verified, what is not
 │   ├── OPEN-QUESTIONS.md
-│   ├── ASSETS.md                   # everything we must commission
-│   ├── decisions/                  # ADRs — one file per irreversible choice
-│   │   └── 0001-spritekit-for-stage.md
-│   └── art/
-│       └── moppet-brief.md         # character brief handed to the illustrator
-│
+│   └── ASSETS.md
+├── Config/Info.plist                 # scene manifest: app + external-display roles
 ├── PuppetMaster.xcodeproj
 │
 ├── PuppetMaster/
 │   ├── App/
-│   │   ├── PuppetMasterApp.swift       # @main; builds AppEnvironment, picks presenter
-│   │   ├── AppEnvironment.swift        # composition root — the only wiring file
-│   │   └── RootView.swift
+│   │   ├── AppDelegate.swift               # UIKit lifecycle — needed for scene roles
+│   │   ├── MainSceneDelegate.swift         # the phone
+│   │   ├── ExternalDisplaySceneDelegate.swift  # an audience-facing display
+│   │   ├── AppEnvironment.swift            # composition root; one engine, one clock
+│   │   ├── RootView.swift                  # picks a layout per mode
+│   │   └── DuoRehearsalView.swift          # both surfaces, one phone
 │   │
-│   ├── Core/                           # pure Swift. No UIKit/SpriteKit/AVFoundation.
+│   ├── Core/                          # pure Swift. No UIKit/SpriteKit/AVFoundation.
 │   │   ├── Model/
-│   │   │   ├── PuppetPose.swift
-│   │   │   ├── PuppetIntent.swift
-│   │   │   ├── Expression.swift
-│   │   │   ├── PuppetAction.swift
-│   │   │   ├── ActionTrack.swift
-│   │   │   └── CharacterDescriptor.swift
+│   │   │   ├── PuppetPose.swift            # the frame, as a value
+│   │   │   ├── PoseChannel (in PuppetPose) # 21 animatable channels
+│   │   │   ├── PuppetIntent.swift          # what a control surface can ask for
+│   │   │   ├── PuppetRenderer.swift        # how a surface receives frames
+│   │   │   ├── Expression.swift · PuppetAction.swift · Easing.swift
+│   │   │   └── CharacterDescriptor.swift   (planned — Moppet is hardcoded today)
 │   │   └── Engine/
-│   │       ├── PuppetEngine.swift      # @MainActor @Observable — source of truth
-│   │       ├── PoseBlender.swift
-│   │       ├── IdleDriver.swift        # breathing, blinking, sway
-│   │       ├── ActionScheduler.swift
-│   │       └── Easing.swift
+│   │       ├── PuppetEngine.swift          # @MainActor @Observable, source of truth
+│   │       ├── PoseBlender.swift           # idle + expression + actions + live
+│   │       ├── IdleDriver.swift            # breathing, blinking, sway
+│   │       ├── ExpressionLayer.swift       # eases between held faces
+│   │       ├── ActionScheduler.swift       # overlapping one-shots
+│   │       └── ActionLibrary.swift         # the 7 authored performances
 │   │
 │   ├── Stage/
-│   │   ├── StageView.swift             # SwiftUI shell hosting SpriteView
-│   │   ├── PuppetRenderer.swift        # protocol
-│   │   ├── SpriteKit/
-│   │   │   ├── PuppetScene.swift       # render loop; ticks the engine
-│   │   │   ├── PuppetRigNode.swift     # builds node tree from descriptor
-│   │   │   ├── SpriteKitPuppetRenderer.swift
-│   │   │   └── EffectFactory.swift
-│   │   └── Backdrops/
+│   │   ├── StageView.swift                 # SwiftUI shell + SpriteView + aim drag
+│   │   ├── PuppetScene.swift               # SKScene conforming to PuppetRenderer
+│   │   ├── MoppetRig.swift                 # the cut-out node hierarchy
+│   │   ├── MoppetPalette.swift · ParticleTextures.swift
+│   │   └── Backdrops/                      (planned)
 │   │
 │   ├── Controls/
-│   │   ├── ControlsView.swift
-│   │   ├── ExpressionPad.swift
-│   │   ├── ActionPad.swift
-│   │   ├── AimPad.swift
-│   │   ├── TalkButton.swift
-│   │   └── SoundPad.swift
+│   │   ├── ControlsView.swift · AimPad.swift · TalkButton.swift · ModeSheet.swift
+│   │   └── SoundPad.swift                  (planned)
 │   │
 │   ├── Audio/
-│   │   ├── AudioSessionManager.swift
-│   │   ├── MicAmplitudeSource.swift    # tap → RMS → smoothed jaw signal
-│   │   ├── AmplitudeBox.swift          # lock-free audio→main hand-off
-│   │   ├── VoiceFXChain.swift
-│   │   └── SoundBank.swift
+│   │   ├── VoiceInput.swift                # picks mic or fallback
+│   │   ├── MicAmplitudeSource.swift        # tap → RMS → jaw
+│   │   ├── AmplitudeBox.swift              # lock-free audio→main hand-off
+│   │   ├── SillyVoiceDriver.swift          # procedural babble
+│   │   └── VoiceFXChain.swift · SoundBank.swift   (planned)
 │   │
 │   ├── Display/
-│   │   ├── DisplayRole.swift
-│   │   ├── StagePresenter.swift        # protocol
-│   │   ├── StageRouter.swift           # the ONLY file that knows about surfaces
-│   │   ├── SingleScreenPresenter.swift
-│   │   ├── ExternalDisplayPresenter.swift
-│   │   └── PeerDevicePresenter.swift   # post-MVP
+│   │   ├── DisplayRole.swift               # roles and presentation modes
+│   │   ├── StageRouter.swift               # the ONLY file that knows about surfaces
+│   │   ├── DuoCapability.swift             # the entire vendor seam
+│   │   └── PeerDevicePresenter.swift       (planned — two-devices mode)
 │   │
-│   ├── Content/
-│   │   ├── CharacterCatalog.swift
-│   │   └── CharacterLoader.swift
-│   │
-│   ├── Store/
-│   │   ├── UnlockStore.swift           # StoreKit 2 entitlements
-│   │   └── PaywallView.swift
-│   │
-│   ├── DesignSystem/
-│   │   ├── Theme.swift
-│   │   ├── Typography.swift
-│   │   └── Haptics.swift
-│   │
+│   ├── Store/                              (planned — StoreKit 2)
 │   ├── Support/
-│   │   ├── Settings.swift
-│   │   └── Logging.swift
-│   │
-│   └── Resources/
-│       ├── Assets.xcassets             # icon, UI art, backdrops
-│       ├── Characters/moppet/
-│       ├── Sounds/
-│       ├── Localizable.xcstrings
-│       ├── Info.plist
-│       └── PrivacyInfo.xcprivacy
+│   │   ├── EngineClock.swift               # CADisplayLink → engine.tick(delta:)
+│   │   ├── Haptics.swift · Theme.swift
+│   └── Resources/Assets.xcassets
 │
-├── PuppetMasterTests/                  # engine, blender, easing, JSON decoding,
-│   └── …                               # amplitude smoothing — all pure, all fast
-└── PuppetMasterUITests/
+└── PuppetMasterTests/
+    ├── PoseBlenderTests.swift        # layering, settling, clamping, stalled frames
+    ├── ActionTrackTests.swift        # sampling, library sanity, cue firing
+    └── VoiceAndDisplayTests.swift    # smoothing, babble, routing, engine fan-out
 ```
 
-**Why this shape:** `Core/` has no framework imports, so the fun part of the product
-(how the puppet moves) is testable in milliseconds without a simulator, a screen, or
-a microphone. `Display/` is a single quarantined directory for the Duo question.
-`Resources/Characters/` is where an art-only character pack lands.
-
----
+**Why this shape:** `Core/` has no framework imports, so the fun part of the product —
+how the puppet moves — is testable in milliseconds with no simulator, screen or
+microphone. `Display/` is a single quarantined directory for the Duo question, and
+`DuoCapability.swift` is the only file a vendor SDK would touch.
 
 ## 9. Testing and quality
 

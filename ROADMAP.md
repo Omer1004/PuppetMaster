@@ -73,8 +73,13 @@ Effort figures are **rough estimates for one developer plus a part-time illustra
 not commitments. They exist to size the shape of the work, and should be replaced with
 real estimates once Phase 0 tells us what we are actually building.
 
-### Phase 0 — Prototype *(~1–2 weeks)*
-**Question it answers: is this actually fun?**
+### Phase 0 — Prototype *(~1–2 weeks)* — **mostly built**
+**Question it answers: is this actually fun? — still unanswered.**
+
+The app exists and runs ([docs/PROTOTYPE.md](docs/PROTOTYPE.md)). What is still owed
+from this phase: the renderer bake-off, the external-display spike against real
+hardware, the microphone tested on a device, and — the actual gate — putting it in
+front of children.
 
 - Throwaway placeholder art — deliberately ugly, so nobody falls in love with it
 - `PuppetPose` + `PuppetEngine` + `PoseBlender` + idle driver, for real (this code survives)

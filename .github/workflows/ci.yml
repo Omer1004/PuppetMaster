@@ -1,0 +1,51 @@
+name: CI
+
+# NOTE: unverified. This has never run — it was written alongside the prototype but
+# cannot be tested locally. The project needs Xcode 26 or newer (deployment target
+# iOS 26); if the hosted runner image is older, pin `xcode-version` below or raise the
+# runner image. Expect to fix this on its first real run.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cheap, fast, and catches the one architectural regression that actually matters.
+      - name: Check Core purity
+        run: ./scripts/check-core-purity.sh
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      # Pick whatever iPhone simulator the runner actually has, rather than pinning a
+      # model name that silently disappears when the image is updated.
+      - name: Choose a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available --json \
+            | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];print(next(v['udid'] for rs in d.values() for v in rs if 'iPhone' in v['name']))")
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          echo "Using simulator $UDID"
+
+      - name: Build and test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project PuppetMaster.xcodeproj \
+            -scheme PuppetMaster \
+            -sdk iphonesimulator \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            CODE_SIGNING_ALLOWED=NO
