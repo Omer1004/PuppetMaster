@@ -5,8 +5,14 @@ import Foundation
 public enum PuppetAction: String, CaseIterable, Identifiable, Sendable, Codable {
     case wave, laugh, jump, spin, nod, shake, topple
     case dance, cheer, sneeze, peek, stretch
+    /// Not offered as a button — fired when the puppet is poked. Kept in `allCases` so
+    /// the library-sanity tests cover it like any other track.
+    case flinch
 
     public var id: String { rawValue }
+
+    /// The actions offered as buttons. `flinch` is reactive, not performable.
+    public static var performable: [PuppetAction] { allCases.filter { $0 != .flinch } }
 
     public var title: String {
         switch self {
@@ -22,6 +28,7 @@ public enum PuppetAction: String, CaseIterable, Identifiable, Sendable, Codable 
         case .sneeze: "Sneeze"
         case .peek:   "Peek"
         case .stretch: "Yawn"
+        case .flinch: "Flinch"
         }
     }
 
@@ -39,6 +46,7 @@ public enum PuppetAction: String, CaseIterable, Identifiable, Sendable, Codable 
         case .sneeze: "wind"
         case .peek:   "eye.slash.fill"
         case .stretch: "zzz"
+        case .flinch: "exclamationmark.circle"
         }
     }
 }
@@ -79,6 +87,7 @@ public struct ActionTrack: Sendable {
     /// live driver also writes — above all `jawOpen`, which the microphone owns.
     public let additive: Set<PoseChannel>
     public let cues: [EffectCue]
+    public let sounds: [SoundCue]
     public let interruptible: Bool
 
     public init(id: PuppetAction,
@@ -86,12 +95,16 @@ public struct ActionTrack: Sendable {
                 additive: Set<PoseChannel> = [],
                 interruptible: Bool = true,
                 cues: [EffectCue] = [],
+                sounds: [SoundCue] = [],
                 channels: [PoseChannel: [Keyframe]]) {
         self.id = id
-        self.duration = duration
+        // A zero or negative duration would divide by zero in the scheduler's fade and
+        // NaN-poison every channel of the pose. Cheap insurance for authored content.
+        self.duration = max(duration, 0.01)
         self.additive = additive
         self.interruptible = interruptible
         self.cues = cues
+        self.sounds = sounds
         self.channels = channels
     }
 

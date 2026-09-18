@@ -199,16 +199,21 @@ public struct CharacterDescriptor: Identifiable, Sendable, Codable, Equatable {
         public var headTiltAmount: Double = 1.0
         /// Chance, per blink, of a second one right after.
         public var doubleBlinkChance: Double = 0.25
+        /// Multiplies every sound the character makes. A small creature should squeak
+        /// and a large one should rumble, out of the same synthesised bank.
+        public var voicePitch: Double = 1.0
 
         public init(breathPeriod: Double = 3.4, breathAmount: Double = 1.0,
                     blinkInterval: ClosedRangeSpec = ClosedRangeSpec(2.0, 6.5),
                     blinkSpeed: Double = 1.0, swayAmount: Double = 1.0,
                     gazeWander: Double = 1.0, headTiltAmount: Double = 1.0,
-                    doubleBlinkChance: Double = 0.25) {
+                    doubleBlinkChance: Double = 0.25,
+                    voicePitch: Double = 1.0) {
             self.breathPeriod = breathPeriod; self.breathAmount = breathAmount
             self.blinkInterval = blinkInterval; self.blinkSpeed = blinkSpeed
             self.swayAmount = swayAmount; self.gazeWander = gazeWander
             self.headTiltAmount = headTiltAmount; self.doubleBlinkChance = doubleBlinkChance
+            self.voicePitch = voicePitch
         }
     }
 }

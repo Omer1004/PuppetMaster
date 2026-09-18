@@ -35,8 +35,8 @@ final class PuppetRig {
     private let armLeftPivot = SKNode()
     private let armRightPivot = SKNode()
 
-    private var eyeLeft: Eye!
-    private var eyeRight: Eye!
+    private let eyeLeft: Eye
+    private let eyeRight: Eye
     private let browLeft = SKShapeNode()
     private let browRight = SKShapeNode()
 
@@ -52,6 +52,8 @@ final class PuppetRig {
     init(character: CharacterDescriptor) {
         self.character = character
         headBaseY = CGFloat(character.head.centerY)
+        eyeLeft = Eye(radius: CGFloat(character.eyes.leftRadius), descriptor: character)
+        eyeRight = Eye(radius: CGFloat(character.eyes.rightRadius), descriptor: character)
 
         buildShadow()
         buildBody()
@@ -71,7 +73,11 @@ final class PuppetRig {
     /// from the descriptor rather than from node frames, which are pose-dependent.
     private func measure() {
         let head = character.head
-        let crestTop = head.centerY + character.crest.offsetY + 70 * character.crest.size
+        // Only reserve headroom for a crest that exists, or a bare-headed character is
+        // scaled down to leave empty space above it.
+        let crestTop = character.crest.kind == .none
+            ? 0
+            : head.centerY + character.crest.offsetY + 70 * character.crest.size
         headHeight = CGFloat(head.centerY)
         designHeight = CGFloat(max(head.centerY + head.halfHeight, crestTop)) + 40
         designWidth = CGFloat(max(character.body.waistHalfWidth,
@@ -254,8 +260,6 @@ final class PuppetRig {
 
     private func buildEyes() {
         let e = character.eyes
-        eyeLeft = Eye(radius: CGFloat(e.leftRadius), descriptor: character)
-        eyeRight = Eye(radius: CGFloat(e.rightRadius), descriptor: character)
         eyeLeft.node.position = CGPoint(x: CGFloat(e.leftCenter.x), y: CGFloat(e.leftCenter.y))
         eyeRight.node.position = CGPoint(x: CGFloat(e.rightCenter.x), y: CGFloat(e.rightCenter.y))
         face.addChild(eyeLeft.node)

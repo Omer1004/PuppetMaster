@@ -1,7 +1,8 @@
 # Prototype — what exists, and what is still a claim
 
 **Toolchain:** Xcode 27.0 · Swift 6.4 · iOS 27 SDK · deployment target iOS 26.0
-**Zero third-party dependencies. No backend. 31 tests, all passing.**
+**Zero third-party dependencies. No backend. No audio assets — every sound is
+synthesised at runtime.**
 
 This is Phase 0 from [ROADMAP.md](../ROADMAP.md): a working app whose job is to answer
 *is this fun?* — not to be shippable. Read the "not verified" section before trusting
@@ -56,6 +57,19 @@ eyes never fully open. **The timing does more than the shapes do.**
 - Controls emit `PuppetIntent` values and never touch puppet state. Haptics on actions.
 - The control panel's middle section scrolls, so nothing is clipped on a half-height
   surface.
+
+### Feel
+- **Sound**, synthesised by `Synth`/`SoundBank` at the requested pitch, so each
+  character has its own voice out of one bank (Pip 1.42×, Bramble 0.66×). Eleven
+  sounds; no files to license or ship.
+- **Screen shake** on landings, scaled by how hard the landing was.
+- **Haptics on the animation beat** — you feel a landing when it lands, not when you
+  pressed the button.
+- **Poke the puppet.** A quick tap on the stage startles it: flinch, squeak, and it
+  looks straight at your finger. Nothing advertises this.
+- **Boredom.** Left alone it yawns after 14s, hides and peeks 11s later, then dances
+  for itself. Resets the instant you touch anything. This is the app's whole engagement
+  design and it is deliberately the only one — see [FEEL.md](FEEL.md).
 
 ### Voice
 - Press-and-hold Talk. Microphone amplitude (RMS → dB → asymmetric smoothing) drives

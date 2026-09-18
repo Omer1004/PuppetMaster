@@ -21,7 +21,7 @@ A `CharacterDescriptor` is nine groups of numbers:
 | `brows` | Widths, thickness, height. The single biggest contributor to readable emotion. |
 | `arms` | Shoulder position (mirrored), length, thickness. |
 | `crest` | `tuft`, `ears`, `antenna`, `spikes` or `none`, plus size and how much it swings. |
-| `personality` | Breath period and depth, blink interval and speed, sway, gaze wander, head tilt. |
+| `personality` | Breath period and depth, blink interval and speed, sway, gaze wander, head tilt, **voice pitch**. |
 
 Every character drives the same twelve actions and seven expressions. Nothing is
 per-character except these numbers.
@@ -45,6 +45,10 @@ The existing four differ most in their timing:
 
 Bramble also has `lidRest: 0.40`, so its eyes never fully open. That one number does more
 for the character than its entire silhouette.
+
+`voicePitch` does the same job for sound. Every effect is synthesised at the requested
+pitch, so a character's whole voice is one number: Pip squeaks at 1.42, Bramble rumbles
+at 0.66, out of the same bank.
 
 **Pick the temperament first, then the shape.**
 
@@ -78,6 +82,17 @@ for the character than its entire silhouette.
   from one rig reading as the same creature in different colours.
 
 ---
+
+## The one thing that is not data
+
+`Crest.Kind` is a closed enum — `tuft`, `ears`, `antenna`, `spikes`, `none` — and
+`PuppetRig.buildCrest` switches on it. A fifth character must either reuse an existing
+crest or add a case, which is a **renderer change**, not a content change.
+
+The switch is exhaustive, so this fails loudly at compile time rather than silently at
+runtime. But if character packs become the monetisation story, this is the first wall
+you hit: a parameterised crest (segment count, length, taper, splay, swing) would keep
+new species data-only. Worth doing before the fifth character, not the tenth.
 
 ## Where this goes next
 

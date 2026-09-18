@@ -126,7 +126,9 @@ find out here, on shipping hardware, for a fraction of the cost.
 **Entry condition: public Duo SDK and a simulator or device.**
 
 - Read the actual SDK. Discard every assumption in this repo that it contradicts
-- Implement `DuoPresenter` behind the existing `StagePresenter` protocol
+- Add a `duo` case to `StageRouter` and a layout for the real inner-screen dimensions.
+  The surfaces themselves need no new machinery: the engine already drives any number
+  of renderers
 - Design the inner-screen control layout for the real dimensions
 - If the abstraction holds, this is small. If it does not, Phase 2 will already have
   told us why

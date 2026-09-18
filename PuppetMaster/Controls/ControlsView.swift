@@ -37,7 +37,7 @@ struct ControlsView: View {
                     expressionRow
 
                     LazyVGrid(columns: actionColumns, spacing: 8) {
-                        ForEach(PuppetAction.allCases) { action in
+                        ForEach(PuppetAction.performable) { action in
                             PadButton(symbol: action.symbol,
                                       title: action.title,
                                       isBusy: engine.activeActions.contains(action),
@@ -67,7 +67,7 @@ struct ControlsView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
 
-            TalkButton(engine: engine, voice: voice)
+            TalkButton(characterName: engine.character.name, voice: voice)
         }
         .padding(.horizontal, 14)
         .padding(.top, topInset)

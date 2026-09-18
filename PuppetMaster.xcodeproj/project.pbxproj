@@ -6,55 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXFileReference section */
-		AA0000000000000000000001 /* PuppetMaster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PuppetMaster.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		AA0000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		AA0000000000000000000070 /* PuppetMasterTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PuppetMasterTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-/* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		AA0000000000000000000010 /* PuppetMaster */ = {isa = PBXFileSystemSynchronizedRootGroup; path = PuppetMaster; sourceTree = "<group>"; };
-		AA0000000000000000000071 /* PuppetMasterTests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = PuppetMasterTests; sourceTree = "<group>"; };
-/* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXFrameworksBuildPhase section */
-		AA0000000000000000000020 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
-		AA0000000000000000000074 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
-/* End PBXFrameworksBuildPhase section */
-
-/* Begin PBXGroup section */
-		AA0000000000000000000030 = {isa = PBXGroup; children = ( AA0000000000000000000010 /* PuppetMaster */, AA0000000000000000000071 /* PuppetMasterTests */, AA0000000000000000000032 /* Config */, AA0000000000000000000031 /* Products */, ); sourceTree = "<group>"; };
-		AA0000000000000000000031 /* Products */ = {isa = PBXGroup; children = ( AA0000000000000000000001 /* PuppetMaster.app */, AA0000000000000000000070 /* PuppetMasterTests.xctest */, ); name = Products; sourceTree = "<group>"; };
-		AA0000000000000000000032 /* Config */ = {isa = PBXGroup; children = ( AA0000000000000000000002 /* Info.plist */, ); path = Config; sourceTree = "<group>"; };
-/* End PBXGroup section */
-
-/* Begin PBXNativeTarget section */
-		AA0000000000000000000040 /* PuppetMaster */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = AA0000000000000000000053 /* Build configuration list for PBXNativeTarget "PuppetMaster" */;
-			buildPhases = ( AA0000000000000000000041 /* Sources */, AA0000000000000000000020 /* Frameworks */, AA0000000000000000000042 /* Resources */, );
-			buildRules = ( );
-			dependencies = ( );
-			fileSystemSynchronizedGroups = ( AA0000000000000000000010 /* PuppetMaster */, );
-			name = PuppetMaster;
-			productName = PuppetMaster;
-			productReference = AA0000000000000000000001 /* PuppetMaster.app */;
-			productType = "com.apple.product-type.application";
-		};
-		AA0000000000000000000072 /* PuppetMasterTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = AA0000000000000000000079 /* Build configuration list for PBXNativeTarget "PuppetMasterTests" */;
-			buildPhases = ( AA0000000000000000000073 /* Sources */, AA0000000000000000000074 /* Frameworks */, AA0000000000000000000075 /* Resources */, );
-			buildRules = ( );
-			dependencies = ( AA0000000000000000000077 /* PBXTargetDependency */, );
-			fileSystemSynchronizedGroups = ( AA0000000000000000000071 /* PuppetMasterTests */, );
-			name = PuppetMasterTests;
-			productName = PuppetMasterTests;
-			productReference = AA0000000000000000000070 /* PuppetMasterTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-/* End PBXNativeTarget section */
-
 /* Begin PBXContainerItemProxy section */
 		AA0000000000000000000076 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -65,13 +16,115 @@
 		};
 /* End PBXContainerItemProxy section */
 
-/* Begin PBXTargetDependency section */
-		AA0000000000000000000077 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = AA0000000000000000000040 /* PuppetMaster */;
-			targetProxy = AA0000000000000000000076 /* PBXContainerItemProxy */;
+/* Begin PBXFileReference section */
+		AA0000000000000000000001 /* PuppetMaster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PuppetMaster.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA0000000000000000000070 /* PuppetMasterTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PuppetMasterTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		AA0000000000000000000010 /* PuppetMaster */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PuppetMaster;
+			sourceTree = "<group>";
 		};
-/* End PBXTargetDependency section */
+		AA0000000000000000000071 /* PuppetMasterTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PuppetMasterTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA0000000000000000000020 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000000074 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA0000000000000000000030 = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000010 /* PuppetMaster */,
+				AA0000000000000000000071 /* PuppetMasterTests */,
+				AA0000000000000000000032 /* Config */,
+				AA0000000000000000000031 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000031 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000001 /* PuppetMaster.app */,
+				AA0000000000000000000070 /* PuppetMasterTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000032 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000002 /* Info.plist */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA0000000000000000000040 /* PuppetMaster */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000053 /* Build configuration list for PBXNativeTarget "PuppetMaster" */;
+			buildPhases = (
+				AA0000000000000000000041 /* Sources */,
+				AA0000000000000000000020 /* Frameworks */,
+				AA0000000000000000000042 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000010 /* PuppetMaster */,
+			);
+			name = PuppetMaster;
+			productName = PuppetMaster;
+			productReference = AA0000000000000000000001 /* PuppetMaster.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AA0000000000000000000072 /* PuppetMasterTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000079 /* Build configuration list for PBXNativeTarget "PuppetMasterTests" */;
+			buildPhases = (
+				AA0000000000000000000073 /* Sources */,
+				AA0000000000000000000074 /* Frameworks */,
+				AA0000000000000000000075 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA0000000000000000000077 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000071 /* PuppetMasterTests */,
+			);
+			name = PuppetMasterTests;
+			productName = PuppetMasterTests;
+			productReference = AA0000000000000000000070 /* PuppetMasterTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		AA0000000000000000000000 /* Project object */ = {
@@ -80,31 +133,77 @@
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2700;
-				TargetAttributes = { AA0000000000000000000040 = { CreatedOnToolsVersion = 27.0; }; AA0000000000000000000072 = { CreatedOnToolsVersion = 27.0; TestTargetID = AA0000000000000000000040; }; };
+				TargetAttributes = {
+					AA0000000000000000000040 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					AA0000000000000000000072 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = AA0000000000000000000040;
+					};
+				};
 			};
 			buildConfigurationList = AA0000000000000000000050 /* Build configuration list for PBXProject "PuppetMaster" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
-			knownRegions = ( en, Base, );
+			knownRegions = (
+				en,
+				Base,
+			);
 			mainGroup = AA0000000000000000000030;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = AA0000000000000000000031 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = ( AA0000000000000000000040 /* PuppetMaster */, AA0000000000000000000072 /* PuppetMasterTests */, );
+			targets = (
+				AA0000000000000000000040 /* PuppetMaster */,
+				AA0000000000000000000072 /* PuppetMasterTests */,
+			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		AA0000000000000000000042 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
-		AA0000000000000000000075 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
+		AA0000000000000000000042 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000000075 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		AA0000000000000000000041 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
-		AA0000000000000000000073 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
+		AA0000000000000000000041 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000000073 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA0000000000000000000077 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000040 /* PuppetMaster */;
+			targetProxy = AA0000000000000000000076 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		AA0000000000000000000051 /* Debug */ = {
@@ -123,7 +222,10 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = ( "DEBUG=1", "$(inherited)", );
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -167,10 +269,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = F6NBAHJCQ2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Config/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@executable_path/Frameworks", );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.omerwm.puppetmaster;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -189,10 +295,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = F6NBAHJCQ2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Config/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@executable_path/Frameworks", );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.omerwm.puppetmaster;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -240,19 +350,28 @@
 /* Begin XCConfigurationList section */
 		AA0000000000000000000050 /* Build configuration list for PBXProject "PuppetMaster" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = ( AA0000000000000000000051 /* Debug */, AA0000000000000000000052 /* Release */, );
+			buildConfigurations = (
+				AA0000000000000000000051 /* Debug */,
+				AA0000000000000000000052 /* Release */,
+			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		AA0000000000000000000053 /* Build configuration list for PBXNativeTarget "PuppetMaster" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = ( AA0000000000000000000054 /* Debug */, AA0000000000000000000055 /* Release */, );
+			buildConfigurations = (
+				AA0000000000000000000054 /* Debug */,
+				AA0000000000000000000055 /* Release */,
+			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		AA0000000000000000000079 /* Build configuration list for PBXNativeTarget "PuppetMasterTests" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = ( AA000000000000000000007A /* Debug */, AA000000000000000000007B /* Release */, );
+			buildConfigurations = (
+				AA000000000000000000007A /* Debug */,
+				AA000000000000000000007B /* Release */,
+			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};

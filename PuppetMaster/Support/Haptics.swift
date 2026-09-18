@@ -10,21 +10,21 @@ enum Haptics {
 
     static var isEnabled = true
 
-    private static let impact = UIImpactFeedbackGenerator(style: .medium)
+    private static let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
     private static let soft = UIImpactFeedbackGenerator(style: .soft)
     private static let selection = UISelectionFeedbackGenerator()
 
     static func prepare() {
         guard isEnabled else { return }
-        impact.prepare()
+        impactGenerator.prepare()
         soft.prepare()
     }
 
     static func action(_ action: PuppetAction) {
         guard isEnabled else { return }
         switch action {
-        case .jump, .topple: impact.impactOccurred(intensity: 0.9)
-        case .spin:          impact.impactOccurred(intensity: 0.7)
+        case .jump, .topple: impactGenerator.impactOccurred(intensity: 0.9)
+        case .spin:          impactGenerator.impactOccurred(intensity: 0.7)
         default:             soft.impactOccurred(intensity: 0.6)
         }
     }
@@ -32,6 +32,13 @@ enum Haptics {
     static func expressionChanged() {
         guard isEnabled else { return }
         selection.selectionChanged()
+    }
+
+    /// Fired on an animation beat rather than a button press — the moment a landing
+    /// actually lands.
+    static func impact(_ intensity: Double) {
+        guard isEnabled else { return }
+        impactGenerator.impactOccurred(intensity: intensity.clamped(to: 0.1...1.0))
     }
 
     static func tick(intensity: Double) {

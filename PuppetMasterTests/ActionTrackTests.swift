@@ -37,6 +37,10 @@ struct ActionTrackTests {
             for cue in track.cues {
                 #expect(cue.time <= track.duration, "\(action) has a cue after it ends")
             }
+            for cue in track.sounds {
+                #expect(cue.time <= track.duration, "\(action) has a sound after it ends")
+                #expect(cue.pitch > 0, "\(action) has a non-positive sound pitch")
+            }
         }
     }
 
@@ -44,11 +48,29 @@ struct ActionTrackTests {
     func cuesFireOnce() {
         var scheduler = ActionScheduler()
         scheduler.fire(.jump)
-        var dustPuffs = 0
+        var impacts = 0
         for _ in 0..<120 {
-            dustPuffs += scheduler.update(delta: 1.0 / 60).count(where: { $0 == .dustPuff })
+            impacts += scheduler.update(delta: 1.0 / 60).effects.count { $0 == .impact }
         }
-        #expect(dustPuffs == 1)
+        #expect(impacts == 1)
+    }
+
+    @Test("Sound cues fire exactly once, and every action makes a noise")
+    func soundCuesFireOnce() {
+        for action in PuppetAction.allCases {
+            let track = ActionLibrary.track(for: action)
+            #expect(!track.sounds.isEmpty, "\(action) is silent")
+
+            var scheduler = ActionScheduler()
+            scheduler.fire(action)
+            var heard: [SoundID] = []
+            let frames = Int((track.duration + 0.5) * 60)
+            for _ in 0..<frames {
+                heard.append(contentsOf: scheduler.update(delta: 1.0 / 60).sounds.map(\.sound))
+            }
+            #expect(heard.count == track.sounds.count,
+                    "\(action) fired \(heard.count) sounds, expected \(track.sounds.count)")
+        }
     }
 
     @Test("Re-firing an action restarts it rather than stacking it")
@@ -119,20 +141,42 @@ struct CharacterLibraryTests {
         #expect(BackdropLibrary.backdrop(id: "nope").id == BackdropLibrary.default.id)
     }
 
-    @Test("Character personality reaches the idle layer")
+    @Test("Character personality actually changes the idle timing")
     func personalityDrivesIdle() {
-        func breathRange(_ character: CharacterDescriptor) -> Double {
+        /// Count breaths in 30s. This distinguishes characters, where a range check
+        /// would pass identically if `adopt()` did nothing at all.
+        func breaths(_ character: CharacterDescriptor) -> Int {
             var blender = PoseBlender()
             blender.idle.adopt(character.personality)
-            var low = Double.infinity, high = -Double.infinity
-            for _ in 0..<600 {
+            var crossings = 0
+            var wasRising = false
+            for _ in 0..<1800 {
                 let value = blender.tick(delta: 1.0 / 60).pose[.breath]
-                low = min(low, value); high = max(high, value)
+                let rising = value > 0.5
+                if rising && !wasRising { crossings += 1 }
+                wasRising = rising
             }
-            return high - low
+            return crossings
         }
-        // Both should breathe; the point is that the layer is actually consulted.
-        #expect(breathRange(CharacterLibrary.pip) > 0.5)
-        #expect(breathRange(CharacterLibrary.bramble) > 0.5)
+
+        let pip = breaths(CharacterLibrary.pip)          // 2.1s period
+        let bramble = breaths(CharacterLibrary.bramble)  // 5.6s period
+        #expect(pip > bramble * 2,
+                "Pip (\(pip) breaths) should breathe far faster than Bramble (\(bramble))")
+    }
+
+    @Test("Every character has its own voice")
+    func voicesDiffer() {
+        let pitches = Set(CharacterLibrary.all.map { $0.personality.voicePitch })
+        #expect(pitches.count == CharacterLibrary.all.count)
+        for character in CharacterLibrary.all {
+            #expect(character.personality.voicePitch > 0)
+        }
+    }
+
+    @Test("A malformed track cannot NaN-poison the pose")
+    func zeroDurationIsClamped() {
+        let track = ActionTrack(id: .wave, duration: 0, channels: [.armRight: [Keyframe(0, 1)]])
+        #expect(track.duration > 0)
     }
 }

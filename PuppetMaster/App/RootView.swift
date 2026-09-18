@@ -32,7 +32,9 @@ struct RootView: View {
             }
 
             if !hasSeenCoachCard {
-                CoachCard { hasSeenCoachCard = true }
+                CoachCard(characterName: environment.engine.character.name) {
+                    hasSeenCoachCard = true
+                }
                     .transition(.opacity)
             }
         }
@@ -46,7 +48,7 @@ struct RootView: View {
     private var soloLayout: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
-                StageView(engine: environment.engine, backdrop: environment.backdrop)
+                StageView(engine: environment.engine)
                     .frame(height: geometry.size.height * 0.54)
                     .clipped()
 
@@ -67,9 +69,7 @@ struct RootView: View {
             // needs to see what the audience sees — and it is a second live surface,
             // driven by the same engine and the same frame.
             ZStack(alignment: .topLeading) {
-                StageView(engine: environment.engine,
-                          backdrop: environment.backdrop,
-                          isInteractive: false)
+                StageView(engine: environment.engine, isInteractive: false)
                     .frame(height: 130)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
@@ -96,6 +96,7 @@ struct RootView: View {
 
 /// First-run coaching. One card, dismissed by any tap, never shown again.
 private struct CoachCard: View {
+    let characterName: String
     let dismiss: () -> Void
 
     var body: some View {
@@ -103,10 +104,10 @@ private struct CoachCard: View {
             Color.black.opacity(0.55).ignoresSafeArea()
 
             VStack(spacing: 14) {
-                Text("Meet Moppet")
+                Text("Meet \(characterName)")
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                 VStack(alignment: .leading, spacing: 10) {
-                    row("hand.tap.fill", "Tap a button to make Moppet move.")
+                    row("hand.tap.fill", "Tap a button to make \(characterName) move.")
                     row("mic.fill", "Hold Talk and its mouth follows your voice.")
                     row("hand.draw.fill", "Drag on the stage to make it look around.")
                 }
@@ -145,9 +146,7 @@ struct AudienceStageView: View {
     private let environment = AppEnvironment.shared
 
     var body: some View {
-        StageView(engine: environment.engine,
-                  backdrop: environment.backdrop,
-                  isInteractive: false)
+        StageView(engine: environment.engine, isInteractive: false)
             .ignoresSafeArea()
     }
 }

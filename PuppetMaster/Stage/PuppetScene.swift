@@ -21,6 +21,9 @@ final class PuppetScene: SKScene, PuppetRenderer {
     private var latestPose: PuppetPose = .neutral
 
     private var backdrop: Backdrop = BackdropLibrary.default
+    /// Where `layout()` put the puppet. The shake animates around this rather than
+    /// from wherever the node happens to be, so a relayout mid-shake cannot strand it.
+    private var worldHome: CGPoint = .zero
 
     override init(size: CGSize) {
         super.init(size: size)
@@ -35,8 +38,21 @@ final class PuppetScene: SKScene, PuppetRenderer {
         view.ignoresSiblingOrder = true
         view.isMultipleTouchEnabled = false
 
-        guard backdropNode == nil else { return }
+        // Only node *creation* is one-time. Draining a pending character and relaying
+        // out must happen on every attach, or a scene reattached to a second view keeps
+        // the old size and silently drops a character loaded while it was detached.
+        if backdropNode == nil { buildSceneFurniture() }
 
+        if let pendingCharacter {
+            self.pendingCharacter = nil
+            build(character: pendingCharacter)
+        }
+        applyBackdrop()
+        layout()
+        rig?.apply(pose: latestPose)
+    }
+
+    private func buildSceneFurniture() {
         let backdropNode = SKSpriteNode(texture: nil, color: .clear, size: size)
         backdropNode.zPosition = -100
         addChild(backdropNode)
@@ -49,15 +65,6 @@ final class PuppetScene: SKScene, PuppetRenderer {
         self.floorNode = floor
 
         addChild(world)
-
-        // A character may have been handed to us before we had a view to build it in.
-        if let pendingCharacter {
-            self.pendingCharacter = nil
-            build(character: pendingCharacter)
-        }
-        applyBackdrop()
-        layout()
-        rig?.apply(pose: latestPose)
     }
 
     override func didChangeSize(_ oldSize: CGSize) {
@@ -100,7 +107,8 @@ final class PuppetScene: SKScene, PuppetRenderer {
         let scale = min(size.width / designWidth, available / designHeight)
 
         world.setScale(max(scale, 0.05))
-        world.position = CGPoint(x: size.width / 2, y: floorY)
+        worldHome = CGPoint(x: size.width / 2, y: floorY)
+        if world.action(forKey: Self.shakeKey) == nil { world.position = worldHome }
 
         backdropNode?.size = size
         backdropNode?.position = CGPoint(x: size.width / 2, y: size.height / 2)
@@ -128,7 +136,7 @@ final class PuppetScene: SKScene, PuppetRenderer {
         field.zPosition = -95
         addChild(field)
         starField = field
-        layoutStars()
+        // `layout()` populates it; doing it here as well built 88 sprites where 44 do.
     }
 
     private func layoutStars() {
@@ -174,6 +182,12 @@ final class PuppetScene: SKScene, PuppetRenderer {
         // Do NOT set `position` here: each effect chooses its own spawn point in
         // `makeEmitters` (dust at the feet, sparkle at the head, confetti from above),
         // and the rig's root is always the world origin.
+        switch effect {
+        case .impact:   shake(11)
+        case .dustPuff: shake(4)
+        default:        break
+        }
+
         for emitter in makeEmitters(for: effect) {
             emitter.targetNode = world
             world.addChild(emitter)
@@ -204,19 +218,39 @@ final class PuppetScene: SKScene, PuppetRenderer {
         }
     }
 
+    private static let shakeKey = "shake"
+
+    /// A short, decaying jolt. Weight is invisible in a 2D puppet until something it
+    /// does moves the world — this is the cheapest way to make a landing land.
+    private func shake(_ intensity: CGFloat) {
+        world.removeAction(forKey: Self.shakeKey)
+        var steps: [SKAction] = []
+        let count = 7
+        for i in 0..<count {
+            let decay = 1 - CGFloat(i) / CGFloat(count)
+            steps.append(.move(to: CGPoint(
+                x: worldHome.x + .random(in: -1...1) * intensity * decay,
+                y: worldHome.y + .random(in: -1...1) * intensity * decay * 0.55),
+                duration: 0.028))
+        }
+        steps.append(.move(to: worldHome, duration: 0.05))
+        world.run(.sequence(steps), withKey: Self.shakeKey)
+    }
+
     private func makeEmitter(for effect: PuppetEffect) -> SKEmitterNode {
         let emitter = SKEmitterNode()
         emitter.zPosition = 5
         let headY = rig?.headHeight ?? 250
 
         switch effect {
-        case .dustPuff:
-            emitter.particleTexture = ParticleTextures.soft(radius: 22, color: .white)
-            emitter.particleBirthRate = 260
+        case .dustPuff, .impact:
+            let heavy = effect == .impact
+            emitter.particleTexture = ParticleTextures.soft(radius: heavy ? 28 : 22, color: .white)
+            emitter.particleBirthRate = heavy ? 460 : 260
             emitter.particleLifetime = 0.55
             emitter.particleLifetimeRange = 0.25
-            emitter.particlePositionRange = CGVector(dx: 150, dy: 10)
-            emitter.particleSpeed = 90
+            emitter.particlePositionRange = CGVector(dx: heavy ? 200 : 150, dy: 10)
+            emitter.particleSpeed = heavy ? 140 : 90
             emitter.particleSpeedRange = 60
             emitter.emissionAngleRange = .pi
             emitter.yAcceleration = 40

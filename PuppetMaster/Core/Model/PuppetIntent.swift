@@ -8,10 +8,13 @@ import Foundation
 /// remote one, so a second surface needs no new engine code at all.
 public enum PuppetIntent: Sendable, Equatable {
     case setCharacter(id: String)
+    case setBackdrop(id: String)
     case setExpression(Expression)
     case perform(PuppetAction)
     case aim(x: Double, y: Double)   // normalised stage coordinates, -1…1
     case releaseAim
+    /// The audience prodded the puppet. Position is in normalised stage coordinates.
+    case poke(x: Double, y: Double)
     case setMicEnabled(Bool)
     case setJawDrive(Double)         // 0…1, from the microphone or the fallback driver
 }

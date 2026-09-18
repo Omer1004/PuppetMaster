@@ -7,7 +7,7 @@ import SwiftUI
 /// app is hearing you before you look up at the puppet.
 struct TalkButton: View {
 
-    let engine: PuppetEngine
+    let characterName: String
     @Bindable var voice: VoiceInput
 
     @State private var isPressed = false
@@ -57,6 +57,6 @@ struct TalkButton: View {
         .frame(height: Theme.touchTarget)
         .accessibilityElement()
         .accessibilityLabel(voice.talkButtonTitle)
-        .accessibilityHint("Touch and hold. Moppet's mouth follows your voice.")
+        .accessibilityHint("Touch and hold. \(characterName)'s mouth follows your voice.")
     }
 }

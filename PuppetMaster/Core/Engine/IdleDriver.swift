@@ -26,17 +26,22 @@ public struct IdleDriver: Sendable {
     private var time: Double = 0
     private var nextBlink: Double
     private var blinkProgress: Double = -1     // -1 = not blinking
+    /// Carried across the blink rather than encoded in `nextBlink`, which the
+    /// completion branch overwrites.
+    private var pendingDoubleBlink = false
     private var rng = SystemRandomNumberGenerator()
 
     public init() {
         nextBlink = Double.random(in: 1.5...4.0)
     }
 
-    /// Reset the clock when the cast changes, so a new character does not inherit the
-    /// previous one's breathing phase mid-inhale.
+    /// Adopt a new character's timing. The breathing phase deliberately carries over —
+    /// restarting it mid-inhale produces a visible hitch at the moment of the swap, and
+    /// nobody can tell where in a breath a new character "should" start.
     public mutating func adopt(_ personality: CharacterDescriptor.Personality) {
         self.personality = personality
         blinkProgress = -1
+        pendingDoubleBlink = false
         nextBlink = time + Double.random(in: personality.blinkInterval.range, using: &rng)
     }
 
@@ -48,14 +53,19 @@ public struct IdleDriver: Sendable {
             blinkProgress += delta
             if blinkProgress > blinkDuration {
                 blinkProgress = -1
-                nextBlink = time + Double.random(in: personality.blinkInterval.range, using: &rng)
+                if pendingDoubleBlink {
+                    pendingDoubleBlink = false
+                    nextBlink = time + 0.1        // the second half of a double blink
+                } else {
+                    nextBlink = time + Double.random(in: personality.blinkInterval.range,
+                                                     using: &rng)
+                }
             }
         } else if time >= nextBlink {
             blinkProgress = 0
             // Sometimes a double blink. Irregularity is what stops it looking timed.
-            if Double.random(in: 0...1, using: &rng) < personality.doubleBlinkChance {
-                nextBlink = time + blinkDuration + 0.12
-            }
+            pendingDoubleBlink =
+                Double.random(in: 0...1, using: &rng) < personality.doubleBlinkChance
         }
     }
 

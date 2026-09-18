@@ -22,6 +22,7 @@ public enum ActionLibrary {
         case .sneeze:  sneeze
         case .peek:    peek
         case .stretch: stretch
+        case .flinch:  flinch
         }
     }
 
@@ -30,6 +31,7 @@ public enum ActionLibrary {
     static let wave = ActionTrack(
         id: .wave,
         duration: 1.35,
+        sounds: [SoundCue(0.16, .whoosh, pitch: 1.1)],
         channels: [
             .armRight: [
                 Keyframe(0.00, 0.00, .easeIn),
@@ -63,6 +65,7 @@ public enum ActionLibrary {
         duration: 1.6,
         additive: [.jawOpen],
         cues: [EffectCue(0.15, .sparkle)],
+        sounds: [SoundCue(0.08, .giggle)],
         channels: [
             .jawOpen: [
                 Keyframe(0.00, 0.00, .easeOut), Keyframe(0.12, 0.42, .easeOut),
@@ -101,7 +104,8 @@ public enum ActionLibrary {
     static let jump = ActionTrack(
         id: .jump,
         duration: 0.95,
-        cues: [EffectCue(0.62, .dustPuff)],
+        cues: [EffectCue(0.62, .impact)],
+        sounds: [SoundCue(0.10, .boing), SoundCue(0.62, .thud)],
         channels: [
             .squash: [
                 Keyframe(0.00, 1.00, .easeIn), Keyframe(0.13, 0.76, .easeOut),
@@ -138,6 +142,7 @@ public enum ActionLibrary {
     static let spin = ActionTrack(
         id: .spin,
         duration: 1.9,
+        sounds: [SoundCue(0.12, .whoosh, pitch: 0.85)],
         channels: [
             .bodyRotation: [
                 Keyframe(0.00, 0.0, .easeIn),
@@ -166,6 +171,7 @@ public enum ActionLibrary {
     static let nod = ActionTrack(
         id: .nod,
         duration: 0.85,
+        sounds: [SoundCue(0.14, .tick)],
         channels: [
             .headNod: [
                 Keyframe(0.00, 0.0, .easeIn), Keyframe(0.16, -0.85, .easeOut),
@@ -186,6 +192,7 @@ public enum ActionLibrary {
     static let shake = ActionTrack(
         id: .shake,
         duration: 0.85,
+        sounds: [SoundCue(0.12, .tick, pitch: 0.9)],
         channels: [
             .headTurn: [
                 Keyframe(0.00, 0.0, .easeIn), Keyframe(0.14, -0.85, .easeOut),
@@ -209,7 +216,8 @@ public enum ActionLibrary {
         id: .topple,
         duration: 2.4,
         interruptible: false,
-        cues: [EffectCue(0.60, .dustPuff)],
+        cues: [EffectCue(0.60, .impact)],
+        sounds: [SoundCue(0.16, .squeak), SoundCue(0.60, .thud, pitch: 0.85)],
         channels: [
             .bodyRotation: [
                 Keyframe(0.00, 0.00, .easeOut), Keyframe(0.18, -0.14, .easeIn),
@@ -256,6 +264,8 @@ public enum ActionLibrary {
         id: .dance,
         duration: 3.0,
         cues: [EffectCue(0.10, .musicNotes)],
+        sounds: [SoundCue(0.40, .pop), SoundCue(1.00, .pop, pitch: 1.12),
+                 SoundCue(1.60, .pop), SoundCue(2.20, .pop, pitch: 1.12)],
         channels: [
             .bodyOffsetX: [
                 Keyframe(0.00, 0, .easeInOut), Keyframe(0.40, -26), Keyframe(1.00, 26),
@@ -302,6 +312,7 @@ public enum ActionLibrary {
         duration: 2.1,
         additive: [.jawOpen],
         cues: [EffectCue(0.16, .confetti), EffectCue(0.20, .sparkle)],
+        sounds: [SoundCue(0.12, .boing), SoundCue(0.22, .chime)],
         channels: [
             .armLeft: [
                 Keyframe(0.00, 0.0, .backOut), Keyframe(0.18, -2.5),
@@ -349,7 +360,8 @@ public enum ActionLibrary {
         id: .sneeze,
         duration: 1.7,
         additive: [.jawOpen],
-        cues: [EffectCue(0.62, .dustPuff)],
+        cues: [EffectCue(0.62, .impact)],
+        sounds: [SoundCue(0.58, .sneeze)],
         channels: [
             .headNod: [
                 Keyframe(0.00, 0.0, .easeInOut), Keyframe(0.52, 0.95, .easeInOut),
@@ -396,6 +408,7 @@ public enum ActionLibrary {
         id: .peek,
         duration: 2.6,
         additive: [.jawOpen],
+        sounds: [SoundCue(0.26, .pop, pitch: 0.8), SoundCue(1.80, .pop, pitch: 1.3)],
         channels: [
             .armLeft: [
                 Keyframe(0.00, 0.0, .easeOut), Keyframe(0.30, -2.75),
@@ -442,6 +455,7 @@ public enum ActionLibrary {
         id: .stretch,
         duration: 3.0,
         additive: [.jawOpen],
+        sounds: [SoundCue(0.30, .yawn)],
         channels: [
             .jawOpen: [
                 Keyframe(0.00, 0.00, .easeInOut), Keyframe(0.35, 0.20),
@@ -480,6 +494,47 @@ public enum ActionLibrary {
             .headTilt: [
                 Keyframe(2.20, 0.00), Keyframe(2.32, 0.14), Keyframe(2.44, -0.12),
                 Keyframe(2.56, 0.07), Keyframe(2.70, 0.00),
+            ],
+        ]
+    )
+
+    // MARK: Flinch — the reaction to being prodded. Short, sharp, and it is the whole
+    // reward for discovering that the puppet can be touched at all.
+
+    static let flinch = ActionTrack(
+        id: .flinch,
+        duration: 0.7,
+        additive: [.jawOpen],
+        sounds: [SoundCue(0.0, .squeak)],
+        channels: [
+            .squash: [
+                Keyframe(0.00, 1.00, .easeOut), Keyframe(0.07, 1.14),
+                Keyframe(0.22, 0.94, .easeInOut), Keyframe(0.40, 1.03),
+                Keyframe(0.70, 1.00),
+            ],
+            .bodyOffsetY: [
+                Keyframe(0.00, 0, .easeOut), Keyframe(0.08, 14),
+                Keyframe(0.30, -2), Keyframe(0.70, 0),
+            ],
+            .browLift: [
+                Keyframe(0.00, 0.0, .easeOut), Keyframe(0.06, 1.0),
+                Keyframe(0.45, 0.3), Keyframe(0.70, 0.0),
+            ],
+            .blink: [
+                Keyframe(0.00, 0.0), Keyframe(0.05, 0.9, .easeOut),
+                Keyframe(0.26, 0.0, .easeOut),
+            ],
+            .jawOpen: [
+                Keyframe(0.00, 0.0, .easeOut), Keyframe(0.07, 0.55),
+                Keyframe(0.34, 0.0),
+            ],
+            .armLeft: [
+                Keyframe(0.00, 0.0, .backOut), Keyframe(0.10, -1.6),
+                Keyframe(0.45, -0.3), Keyframe(0.70, 0.0),
+            ],
+            .armRight: [
+                Keyframe(0.00, 0.0, .backOut), Keyframe(0.10, 1.6),
+                Keyframe(0.45, 0.3), Keyframe(0.70, 0.0),
             ],
         ]
     )

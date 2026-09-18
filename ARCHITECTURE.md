@@ -80,21 +80,24 @@ The one abstraction that must not be got wrong. Everything above the renderer sp
 in this vocabulary:
 
 ```swift
+/// Every animatable property of a puppet. 21 channels.
+public enum PoseChannel: Int, CaseIterable, Sendable, Codable {
+    case jawOpen, mouthSmile, tongueOut, gazeX, gazeY, blink, browLift, browAngle,
+         headTilt, headTurn, headNod, bodyLean, bodyOffsetX, bodyOffsetY,
+         bodyRotation, squash, breath, armLeft, armRight, hairLag, shadowScale
+}
+
 /// A complete description of the puppet for one frame. Pure value type.
-struct PuppetPose: Equatable, Sendable {
-    var jawOpen: Double          // 0…1   — mic amplitude + action contributions
-    var gaze: SIMD2<Double>      // -1…1  — where the eyes point
-    var headTilt: Double         // radians
-    var bodyLean: Double         // radians
-    var bodyOffset: SIMD2<Double>
-    var squash: Double           // 1 = neutral; <1 squashed, >1 stretched
-    var breath: Double           // 0…1   — idle chest/body scale
-    var blink: Double            // 0…1   — 1 = fully closed
-    var armLeft: LimbPose
-    var armRight: LimbPose
-    var brow: BrowPose
-    var mouthShape: MouthShape   // a discrete overlay: .neutral .smile .o .tongue
-    var accessoryLag: SIMD2<Double>  // hair tuft / secondary motion
+///
+/// Channel-indexed rather than a struct of named fields, so layers can compose
+/// generically (`override` / `add` over any channel) without a switch per property.
+public struct PuppetPose: Equatable, Sendable {
+    private var storage: [Double]
+    public subscript(channel: PoseChannel) -> Double { get set }
+
+    public mutating func override(_ channel: PoseChannel, _ target: Double, weight: Double)
+    public mutating func add(_ channel: PoseChannel, _ delta: Double, weight: Double)
+    public mutating func clampToLimits()
 }
 ```
 
@@ -145,18 +148,22 @@ An action is a short keyframe track over pose channels, with an optional sound a
 particle cue:
 
 ```swift
-struct ActionTrack: Codable, Sendable {
-    let id: PuppetAction
-    let duration: TimeInterval
-    let channels: [PoseChannel: [Keyframe]]   // time, value, easing
-    let sound: SoundID?
-    let effect: EffectID?      // e.g. dust puff on landing
-    let interruptible: Bool
+public struct ActionTrack: Sendable {
+    public let id: PuppetAction
+    public let duration: Double
+    public let channels: [PoseChannel: [Keyframe]]   // time, value, easing
+    /// Channels that displace the pose instead of taking it over — anything a live
+    /// driver also writes, above all `jawOpen`, which the microphone owns.
+    public let additive: Set<PoseChannel>
+    public let cues: [EffectCue]      // dust, sparkle, confetti, music notes
+    public let sounds: [SoundCue]     // with a pitch multiplier
+    public let interruptible: Bool
 }
 ```
 
-Authored as JSON, tuned by editing a file and hot-reloading in the simulator. No
-recompile per tweak.
+Authored as Swift literals today, in `ActionLibrary`. **They are not yet `Codable` and
+there is no JSON loading** — tuning a curve means a recompile. The shape is data, so the
+move is mechanical, but it has not been made.
 
 ---
 
@@ -251,11 +258,24 @@ and optionally `AVAudioUnitDistortion` / `AVAudioUnitReverb`. Presets: *Squeaky*
 - Denied permission is a first-class path: the Talk button becomes "Silly Voice" and
   drives the jaw from a procedural rhythm generator.
 
-### 5.4 Sound bank
+### 5.4 Sound bank — built, and synthesised
 
-Short one-shots (laugh, pop, boing, whoosh, dust) preloaded as `AVAudioPlayerNode`
-buffers or `SKAudioNode`. Must duck cleanly against live mic playback. Global mute
-honored everywhere, including haptics-off.
+Every sound is **generated at runtime** by `Synth` (pure maths over a `[Float]`) and
+played from an `AVAudioPCMBuffer` on a pool of eight `AVAudioPlayerNode`s. There are no
+audio files in the project.
+
+The reason is not minimalism. Because sounds are rendered *at the pitch they are needed*,
+a character's voice is one number in its `Personality` — Pip squeaks at 1.42×, Bramble
+rumbles at 0.66×, from one bank and with no pitch-shifting unit in the graph. Buffers are
+cached per (sound, pitch bucket); the first render of each is well under a millisecond.
+
+**Sound does not go through `PuppetRenderer`.** Renderers are per-surface, and audio is
+not: the engine emits it once per performance through `onSound`, or two stages would
+double every noise.
+
+`AudioSession` owns the category. Recording is a temporary *upgrade* from playback while
+the Talk button is held, and releasing returns to playback — an earlier version
+deactivated the session on release and cut off any sound still ringing.
 
 ---
 
@@ -264,33 +284,45 @@ honored everywhere, including haptics-off.
 ### 6.1 The contract
 
 ```swift
-/// Which half of the experience a given surface renders.
-enum DisplayRole: Sendable {
+/// Which half of the experience a surface is showing.
+public enum DisplayRole: String, Sendable, CaseIterable {
     case combined   // one screen: stage + controls stacked
     case stage      // audience-facing only, zero chrome
     case controls   // performer-facing only
 }
 
-/// Something that can present one or both roles. Each mode is an implementation.
-protocol StagePresenter {
-    var availableRoles: Set<DisplayRole> { get }
-    func attach(engine: PuppetEngine) async throws
-    func detach()
+/// How the app is currently spreading itself across surfaces.
+public enum PresentationMode: String, CaseIterable, Sendable {
+    case solo, duoRehearsal, externalDisplay, duo
+    public var roles: Set<DisplayRole> { … }
 }
 ```
 
-`StageRouter` picks a presenter at runtime and is the **only** place in the codebase
-that knows how many surfaces exist. `StageView` and `ControlsView` are written once
-and are never aware of which presenter mounted them.
+`StageRouter` is the **only** type in the app that knows how many screens there are. It
+owns the current `PresentationMode`, reports which modes are available and why the rest
+are not, and tracks external-display connect/disconnect. `StageView` and `ControlsView`
+are written once and never learn which mode mounted them — that ignorance is precisely
+what makes adding a surface cheap.
 
-### 6.2 Planned presenters
+> **Earlier drafts of this document described a `StagePresenter` protocol with
+> `attach(engine:)`/`detach()` and one conformance per mode. It was never built and the
+> name appears nowhere in the code.** What shipped is simpler: the router picks a mode,
+> `RootView` switches on it, and the system's own scene delegates supply extra surfaces.
+> The important property — that surfaces are independent and the engine drives all of
+> them — is delivered by `PuppetEngine`'s renderer list, not by a presenter abstraction.
 
-| Presenter | Roles | Mechanism | Status |
+### 6.2 How each mode gets its surfaces
+
+| Mode | Roles | Mechanism | Status |
 |---|---|---|---|
-| `SingleScreenPresenter` | `.combined` | One SwiftUI scene, stage + controls stacked | MVP |
-| `ExternalDisplayPresenter` | `.stage` + `.controls` | Scene-role external display attachment | ⚠️ spike required |
-| `PeerDevicePresenter` | `.stage` + `.controls` | MultipeerConnectivity, intents over the wire | Post-MVP |
-| `DuoPresenter` | `.stage` + `.controls` | **Unknown. Not written until an SDK exists.** | Blocked |
+| **Solo** | `.combined` | One SwiftUI scene, stage above controls | ✅ Built |
+| **Duo Rehearsal** | `.stage` + `.controls` | Two panels in `DuoRehearsalView`, same views a two-screen device would use | ✅ Built |
+| **Big Screen** | `.stage` + `.controls` | `ExternalDisplaySceneDelegate` on the `externalDisplayNonInteractive` scene role | ⚠️ Written, never run against a display |
+| **Duo** | `.stage` + `.controls` | **Unknown.** Not written until an SDK exists. | Blocked |
+
+Multi-surface output does not come from this table — it comes from `PuppetEngine`
+pushing every frame to every registered `PuppetRenderer`. Adding a surface means adding
+a renderer, not a presenter.
 
 ### 6.3 External display — partly resolved
 
@@ -316,8 +348,10 @@ selection in one file.
 settings, ship dead code paths, or make any product promise that depends on
 unannounced hardware.
 
-When an SDK lands, the expected work is one new `StagePresenter` conformance plus a
-control layout tuned for a larger inner screen. If it turns out to need more, the
+When an SDK lands, the expected work is a `duo` branch in `StageRouter`, a scene (or
+whatever the SDK offers) hosting the existing `StageView`, and a control layout tuned
+for a larger inner screen. The engine already drives any number of renderers, so the
+surfaces themselves need nothing new. If it turns out to need more, the
 abstraction was wrong — and it will have cost us roughly one file to find out.
 
 ---
@@ -356,12 +390,17 @@ a puppet look alive.
 Because `PuppetPose` is a pure value type and the renderer sits behind:
 
 ```swift
-protocol PuppetRenderer: AnyObject {
-    func load(character: CharacterDescriptor) async throws
+@MainActor
+public protocol PuppetRenderer: AnyObject {
+    func load(character: CharacterDescriptor)
+    func setBackdrop(_ backdrop: Backdrop)
     func apply(pose: PuppetPose)
-    func fire(effect: EffectID, at: SIMD2<Double>)
+    func fire(effect: PuppetEffect)
 }
 ```
+
+Note what is *not* here: sound. Audio is emitted once per performance through
+`PuppetEngine.onSound`, not per renderer — two stages must not double every noise.
 
 …switching to pure SwiftUI (or Rive) later means writing one new conformance. The
 engine, the controls, the character JSON, the action tracks, and the tests all

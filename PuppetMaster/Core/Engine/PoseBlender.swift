@@ -45,12 +45,12 @@ public struct PoseBlender: Sendable {
     public init() {}
 
     /// Advance every layer and produce the frame.
-    public mutating func tick(delta: Double) -> (pose: PuppetPose, effects: [PuppetEffect]) {
+    public mutating func tick(delta: Double) -> (pose: PuppetPose, cues: ActionScheduler.Cues) {
         let delta = delta.clamped(to: 0...0.1)   // a stall must not teleport the puppet
 
         idle.update(delta: delta)
         expression.update(delta: delta)
-        let effects = actions.update(delta: delta)
+        let cues = actions.update(delta: delta)
 
         jawSmoother.update(target: live.jawDrive.clamped(to: 0...1), delta: delta)
         aimWeight.update(target: live.aim == nil ? 0 : 1, delta: delta)
@@ -67,7 +67,7 @@ public struct PoseBlender: Sendable {
         applyHairLag(to: &pose, delta: delta)
 
         pose.clampToLimits()
-        return (pose, effects)
+        return (pose, cues)
     }
 
     private mutating func applyLive(to pose: inout PuppetPose) {

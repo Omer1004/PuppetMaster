@@ -15,15 +15,30 @@ final class AppEnvironment {
     let engine = PuppetEngine()
     let router = StageRouter()
     let voice = VoiceInput()
+    let sound = SoundBank()
 
-    /// Where the puppet performs. Kept here rather than on the engine because it is
-    /// staging, not behaviour — any character can play against any backdrop.
-    private(set) var backdrop: Backdrop = BackdropLibrary.default
+    /// Staging lives on the engine so it reaches every surface the same way a pose
+    /// does. This type is the *command* layer: it turns a tap into an intent and
+    /// remembers the choice. See ARCHITECTURE §4.1.
+    var backdrop: Backdrop { engine.backdrop }
 
     @ObservationIgnored private var clock: EngineClock?
     @ObservationIgnored private var reduceMotionObserver: (any NSObjectProtocol)?
 
     private init() {
+        // Sound is emitted once per performance, not once per surface — the engine hands
+        // it here rather than to renderers, so two stages do not double every noise.
+        engine.onSound = { [sound] id, pitch in
+            sound.play(id, pitch: pitch)
+            // Haptics on the animation's beat rather than on the button press. Feeling a
+            // landing at the moment it lands is most of why it reads as weight.
+            switch id {
+            case .thud:   Haptics.impact(0.95)
+            case .boing:  Haptics.impact(0.55)
+            case .squeak: Haptics.impact(0.40)
+            default:      break
+            }
+        }
         restoreChoices()
         clock = EngineClock { [weak self] delta in self?.frame(delta) }
         applyReduceMotion()
@@ -49,8 +64,7 @@ final class AppEnvironment {
     }
 
     func selectBackdrop(_ backdrop: Backdrop) {
-        guard backdrop != self.backdrop else { return }
-        self.backdrop = backdrop
+        engine.send(.setBackdrop(id: backdrop.id))
         defaults.set(backdrop.id, forKey: Key.backdrop)
     }
 
@@ -61,7 +75,7 @@ final class AppEnvironment {
             engine.send(.setCharacter(id: id))
         }
         if let id = defaults.string(forKey: Key.backdrop) {
-            backdrop = BackdropLibrary.backdrop(id: id)
+            engine.send(.setBackdrop(id: id))
         }
     }
 
@@ -73,8 +87,14 @@ final class AppEnvironment {
 
     // MARK: Clock
 
-    func startClock() { clock?.start() }
-    func stopClock() { clock?.stop() }
+    func startClock() {
+        sound.start()
+        clock?.start()
+    }
+    func stopClock() {
+        clock?.stop()
+        sound.stop()
+    }
 
     /// Reduced motion damps the idle layer rather than switching it off. A completely
     /// still puppet reads as a crashed app, which serves nobody.

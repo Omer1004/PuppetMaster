@@ -64,6 +64,6 @@ struct AimPad: View {
         }
         .accessibilityElement()
         .accessibilityLabel("Look pad")
-        .accessibilityHint("Drag to make Moppet look around.")
+        .accessibilityHint("Drag to make \(engine.character.name) look around.")
     }
 }

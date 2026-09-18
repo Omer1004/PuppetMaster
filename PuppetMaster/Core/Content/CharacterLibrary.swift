@@ -42,7 +42,7 @@ public enum CharacterLibrary {
         brows: .init(),
         arms: .init(),
         crest: .init(kind: .tuft, size: 1.0, offsetY: 74, swing: 1.0),
-        personality: .init())
+        personality: .init(voicePitch: 1.0))
 
     // MARK: Pip — the excitable one
 
@@ -70,7 +70,7 @@ public enum CharacterLibrary {
         personality: .init(breathPeriod: 2.1, breathAmount: 1.5,
                            blinkInterval: ClosedRangeSpec(0.9, 2.8), blinkSpeed: 1.5,
                            swayAmount: 1.5, gazeWander: 1.7, headTiltAmount: 1.4,
-                           doubleBlinkChance: 0.45))
+                           doubleBlinkChance: 0.45, voicePitch: 1.42))
 
     // MARK: Bramble — the deadpan one
 
@@ -99,7 +99,7 @@ public enum CharacterLibrary {
         personality: .init(breathPeriod: 5.6, breathAmount: 0.7,
                            blinkInterval: ClosedRangeSpec(5.0, 11.0), blinkSpeed: 0.65,
                            swayAmount: 0.55, gazeWander: 0.5, headTiltAmount: 0.6,
-                           doubleBlinkChance: 0.05))
+                           doubleBlinkChance: 0.05, voicePitch: 0.66))
 
     // MARK: Thistle — the troublemaker
 
@@ -128,5 +128,5 @@ public enum CharacterLibrary {
         personality: .init(breathPeriod: 2.8, breathAmount: 0.9,
                            blinkInterval: ClosedRangeSpec(1.4, 4.2), blinkSpeed: 1.8,
                            swayAmount: 1.8, gazeWander: 1.9, headTiltAmount: 1.6,
-                           doubleBlinkChance: 0.40))
+                           doubleBlinkChance: 0.40, voicePitch: 0.82))
 }

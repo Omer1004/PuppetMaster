@@ -9,12 +9,11 @@ import SpriteKit
 struct StageView: View {
 
     let engine: PuppetEngine
-    var backdrop: Backdrop = BackdropLibrary.default
     /// False for an audience-facing surface: the stage on a TV is not a control.
     var isInteractive: Bool = true
 
     @State private var scene = PuppetScene(size: CGSize(width: 390, height: 520))
-    @State private var isAiming = false
+    @State private var touchStartedAt: Date?
 
     var body: some View {
         GeometryReader { geometry in
@@ -26,22 +25,18 @@ struct StageView: View {
                 .accessibilityElement()
                 .accessibilityLabel("Puppet stage")
                 .accessibilityHint(isInteractive
-                    ? "Drag anywhere to make Moppet look that way."
+                    ? "Drag to make \(engine.character.name) look around, or tap to poke."
                     : "Shows the puppet performance.")
         }
-        .onAppear {
-            scene.setBackdrop(backdrop)
-            engine.addRenderer(scene)
-        }
+        .onAppear { engine.addRenderer(scene) }
         .onDisappear { engine.removeRenderer(scene) }
-        .onChange(of: backdrop) { _, new in scene.setBackdrop(new) }
     }
 
     private func aimGesture(in size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 guard isInteractive, size.width > 0, size.height > 0 else { return }
-                isAiming = true
+                if touchStartedAt == nil { touchStartedAt = Date() }
                 // Normalise to -1…1 with the origin at the puppet's head, which sits
                 // above centre — aiming at the middle of the stage should read as
                 // looking straight ahead, not downward.
@@ -49,10 +44,22 @@ struct StageView: View {
                 let y = 1 - (value.location.y / (size.height * 0.75)) * 2
                 engine.send(.aim(x: Double(x), y: Double(y)))
             }
-            .onEnded { _ in
-                guard isInteractive else { return }
-                isAiming = false
-                engine.send(.releaseAim)
+            .onEnded { value in
+                guard isInteractive, size.width > 0, size.height > 0 else { return }
+                let began = touchStartedAt
+                touchStartedAt = nil
+
+                // A quick tap that barely moved is a poke, not an aim. Nothing tells you
+                // the puppet can be prodded, which is exactly why finding out is a treat.
+                let travel = hypot(value.translation.width, value.translation.height)
+                let held = began.map { Date().timeIntervalSince($0) } ?? 0
+                if travel < 12, held < 0.4 {
+                    engine.send(.poke(x: Double((value.location.x / size.width) * 2 - 1),
+                                      y: Double(1 - (value.location.y / (size.height * 0.75)) * 2)))
+                    Haptics.tick(intensity: 0.7)
+                } else {
+                    engine.send(.releaseAim)
+                }
             }
     }
 }

@@ -62,11 +62,7 @@ final class MicAmplitudeSource {
     func start() throws {
         guard !isRunning else { return }
 
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord,
-                                mode: .default,
-                                options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])
-        try session.setActive(true)
+        try AudioSession.activateForRecording()
 
         // Checked again here, not just at the call site: `inputNode` below is the line
         // that can abort the process if there is nothing behind it.
@@ -112,7 +108,9 @@ final class MicAmplitudeSource {
         engine.pause()
         box.store(0)
         isRunning = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        // Return to playback rather than deactivating: deactivating here used to cut off
+        // any sound effect still ringing when the Talk button came up.
+        AudioSession.activateForPlayback()
         log.info("Microphone amplitude source stopped")
     }
 

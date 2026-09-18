@@ -26,6 +26,7 @@ open PuppetMaster.xcodeproj
 | **[docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md)** | Ten decisions needed before implementation |
 | **[docs/PROTOTYPE.md](docs/PROTOTYPE.md)** | What the prototype does, what is verified, and what is not |
 | **[docs/CHARACTERS.md](docs/CHARACTERS.md)** | How to add a character — and why timing matters more than shape |
+| **[docs/FEEL.md](docs/FEEL.md)** | Game feel and engagement design — and the compulsion mechanics this app refuses |
 
 ### Where each requested deliverable lives
 
@@ -53,6 +54,10 @@ open PuppetMaster.xcodeproj
   proportions and, mostly, the timing. Working names, not yet cleared.
 - **Characters are data.** Adding one is a value in a library file — no views, no
   actions, no renderer work. See [docs/CHARACTERS.md](docs/CHARACTERS.md).
+- **Feel:** synthesised sound pitched per character, screen shake on impact, haptics on
+  the animation beat, and a puppet you can poke. If you put the phone down it gets
+  bored and yawns. No streaks, no timers, no notifications —
+  [docs/FEEL.md](docs/FEEL.md) says why.
 - **Tech:** Swift · SwiftUI · SpriteKit for the stage · AVFoundation for voice ·
   **zero third-party dependencies** · no backend.
 - **Duo:** stage and controls are genuinely independent surfaces driven by one engine.
