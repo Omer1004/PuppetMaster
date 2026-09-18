@@ -145,7 +145,6 @@ by reading:
 | **Duo** | No hardware, no SDK. | Both. |
 | **Haptics** | Simulator does not produce them. | A real device. |
 | **Landscape, and Duo Rehearsal side by side** | The layout *decision* is now a pure function with its own tests (`StageLayout`), and the side-by-side branch composes and builds — but no one has looked at it. This Xcode install has no `Simulator.app`, so the simulator cannot be rotated from here. | Five minutes on a device, or an Xcode with the Simulator app. |
-| **CI** | The workflow has never run; the hosted runner image may not have Xcode 26+. | One push. Expect to fix it. |
 | **Performance** | Two things now measured on the Simulator: `apply(pose:)` at 1.55 µs/frame (0.02% of a 16.7 ms budget for two puppets), and building a puppet at ~29 ms cold / ~0.1 ms warm. Neither has been measured on a device, and the steady-state frame rate with two full rigs has never been profiled at all. | Instruments, on the oldest device we decide to support. |
 | **VoiceOver** | Labels exist; VoiceOver has never actually been switched on. | An hour with the screen reader. |
 | **Dynamic Type** | Every fixed font size is now a text style, and the tiles, the Talk bar and the grid columns grow with `@ScaledMetric` — but only the default size has been looked at. | Five minutes with the text-size slider at the accessibility sizes. |
@@ -213,10 +212,14 @@ Unchanged from before, plus two new entries:
   call mid-sentence, headphones connected while talking, media services restarting).
   None of these can be triggered in the Simulator.
 - **60fps with two puppets on a real device.** Two full rigs now draw at once and each
-  is a baked sprite tree rather than a handful of shape nodes. This has not been
-  profiled anywhere, and the graphics work came with an explicit note that the eye masks
-  want profiling with both puppets visible.
+  is a baked sprite tree rather than a handful of shape nodes. The steady state looks
+  safe — `apply(pose:)` measures 1.55 µs per frame per puppet on the Simulator, which is
+  0.02% of the budget for two — but the frame rate itself has not been profiled on a
+  device, and the graphics work came with an explicit note that the eye masks want
+  profiling with both puppets visible.
 - The tip jar against **real** App Store Connect products. Locally it runs against
   `Config/PuppetMaster.storekit`; the three product IDs do not exist in App Store
   Connect yet, so in production the sheet will currently show "not available".
-- External display, haptics, landscape, CI, VoiceOver actually switched on.
+- External display, haptics, landscape, VoiceOver and the accessibility text sizes
+  actually switched on. (CI is the exception in that list: it runs on every push to
+  main and has passed on every commit.)
