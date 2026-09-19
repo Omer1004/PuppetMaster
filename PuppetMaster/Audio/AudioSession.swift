@@ -15,13 +15,16 @@ import OSLog
 ///
 /// **This type holds the intent, and the intent is the single source of truth.** The
 /// first version was a stateless pair of `activateFor…` calls that either owner could
-/// make at any time, and that had a bug with teeth: the sound bank's
-/// configuration-change handler called `activateForPlayback()`, but the thing that
-/// posts a configuration change is the microphone upgrading the session. So every Talk
-/// press became a fight — mic goes to `.playAndRecord`, sound bank drags it back to
-/// `.playback` while the user is still holding the button, mic sees *that* change and
-/// upgrades again. Owners now declare what they need and ask for the intent to be
-/// re-applied; they never name a category themselves.
+/// make at any time, and the sound bank's recovery handler used one of them — so every
+/// Talk press became a fight between the two engines over the category.
+///
+/// Owners now declare what they need and never name a category themselves. Two rules
+/// keep that honest, and both exist because breaking them froze the app on device:
+///
+/// 1. **Nobody re-applies the session from a configuration-change handler.** Applying a
+///    category is what posts that notification. `AudioRecovery` holds this rule.
+/// 2. **Applying a category the session already has is skipped.** It is not a no-op in
+///    AVFoundation — it reconfigures the hardware and posts the notification anyway.
 @MainActor
 enum AudioSession {
 
@@ -77,10 +80,12 @@ enum AudioSession {
 
     /// Re-assert whatever is currently intended, without changing it.
     ///
-    /// This is what an engine calls after the system has pulled its graph apart. It is
-    /// the *only* correct thing to call there: a rebuild triggered by the microphone
-    /// starting must not undo the microphone starting.
-    static func reactivate() {
+    /// **Only for events that took the session away from us** — an interruption ending,
+    /// or media services restarting. Never for an ordinary configuration change:
+    /// applying a category is what *posts* that notification, so a handler that responds
+    /// to it by applying a category re-triggers itself until the main queue is saturated
+    /// and the app is frozen. `AudioRecovery` holds that rule and the reasoning.
+    static func reassert() {
         switch intent {
         case .playback:
             _ = applyPlayback()
@@ -99,9 +104,8 @@ enum AudioSession {
 
     private static func applyPlayback() -> Bool {
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            try session.setActive(true)
+            try setCategoryIfNeeded(.playback, options: [.mixWithOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
             return true
         } catch {
             // Losing sound is a degraded experience, never a broken one.
@@ -111,10 +115,47 @@ enum AudioSession {
     }
 
     private static func applyRecording() throws {
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord,
-                                mode: .default,
+        try setCategoryIfNeeded(.playAndRecord,
                                 options: [.defaultToSpeaker, .mixWithOthers])
-        try session.setActive(true)
+        try AVAudioSession.sharedInstance().setActive(true)
+    }
+
+    /// Setting a category the session already has is **not** free: it still reconfigures
+    /// the audio hardware, and that posts `AVAudioEngineConfigurationChange` to every
+    /// running engine. Skipping the redundant call is what stops a recovery handler from
+    /// feeding itself. Belt and braces with `AudioRecovery` — the callers should not be
+    /// asking in the first place, and if one does, it costs nothing.
+    private static func setCategoryIfNeeded(_ category: AVAudioSession.Category,
+                                            options: AVAudioSession.CategoryOptions) throws {
+        let session = AVAudioSession.sharedInstance()
+        guard session.category != category || session.categoryOptions != options else {
+            return
+        }
+        noteHardwareReconfiguration()
+        try session.setCategory(category, mode: .default, options: options)
+    }
+
+    // MARK: Tripwire
+
+    /// Every loop of the kind described above has to pass through here, because this is
+    /// the only place the app reconfigures the audio hardware.
+    ///
+    /// Twice now a recovery handler has fed itself and frozen the app on device, and
+    /// both times there was nothing to look at afterwards: a livelock produces no crash
+    /// report, no exception and no stack. This turns the next one into a `fault` in
+    /// Console naming the file to look at — cheap insurance on a bug class that cannot
+    /// happen in the Simulator and is silent on device.
+    private static var recentChanges: [Date] = []
+    private static let changeWindow: TimeInterval = 2
+    /// A Talk press plus a route change is a handful. Past this it is a loop.
+    private static let changeLimit = 8
+
+    private static func noteHardwareReconfiguration() {
+        let now = Date()
+        recentChanges.removeAll { now.timeIntervalSince($0) > changeWindow }
+        recentChanges.append(now)
+        guard recentChanges.count > changeLimit else { return }
+        log.fault("Audio session category changed \(recentChanges.count, privacy: .public) times in \(changeWindow, privacy: .public)s — something is re-applying the session from a configuration-change handler. See AudioRecovery. The app is about to freeze.")
+        recentChanges.removeAll()
     }
 }

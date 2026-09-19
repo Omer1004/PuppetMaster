@@ -118,6 +118,50 @@ recording flag regardless, so a `setCategory` that failed left the session in
 until the app is killed, and nothing ever retries. The intent now only moves on success,
 so the next `returnToPlaybackIfNeeded()` tries again.
 
+## Round three: the freeze
+
+Reported on device against the build that contained the fix above: pressing Hold to Talk
+**froze** the app. No crash, no report — the screen simply stopped updating.
+
+That is a livelock, and it was introduced by the fix. The cycle:
+
+1. `mic.start()` sets the session to `.playAndRecord`, reconfiguring the hardware
+2. that posts `AVAudioEngineConfigurationChange` to the **sound bank's** engine
+3. `SoundBank.rebuild()` responds by calling `AudioSession.reactivate()`, which applies
+   `.playAndRecord` again
+4. which reconfigures the hardware again — go to 2
+
+The notifications are delivered on the main queue, so every turn re-enqueues work onto a
+queue that never drains. The UI is never given a chance to draw. The previous version had
+the same shape with an extra participant (the sound bank set `.playback`, the microphone
+undid it); re-asserting the intent instead turned a two-party oscillation into a tight
+self-sustaining loop in one handler.
+
+**The rule that was missing, stated plainly:**
+
+> Applying an audio session category *is what posts* `AVAudioEngineConfigurationChange`.
+> A handler for that notification must therefore never apply a category. It would be
+> re-triggering itself.
+
+A configuration change means the engine's *graph* is invalid. It never means the session
+needs re-applying — the session is already whatever caused the notification.
+
+Three changes, so this cannot come back:
+
+1. **`AudioRecovery`** is a pure decision table — which of the three system audio events
+   needs the session re-asserted, and which needs a fresh engine object. A plain
+   configuration change needs neither. It is unit-tested, including a test that fails if
+   a fourth event is added without someone deciding.
+2. **Applying a category the session already has is skipped.** It is not a no-op in
+   AVFoundation: it reconfigures the hardware and posts the notification regardless.
+3. **A tripwire.** Every loop must pass through the one function that reconfigures the
+   hardware, so that function counts changes in a rolling two-second window and logs a
+   `fault` past eight. A livelock leaves nothing behind to read; this leaves a line in
+   Console naming the file to open.
+
+None of this is verified on device. The Simulator has no usable audio input, so the whole
+path is gated off there — which is how this shipped twice.
+
 ## Confirming it
 
 This diagnosis is from code and documented contract, not from a stack trace. To confirm

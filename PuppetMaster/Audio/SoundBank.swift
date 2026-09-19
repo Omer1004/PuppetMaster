@@ -41,10 +41,11 @@ final class SoundBank {
         guard !isStarted else { return }
         isStarted = true
         observeSystemAudioEvents()
-        // `reactivate()` rather than `activateForPlayback()` for the same reason: at
-        // cold start the intent is already playback so this is identical, and if the
-        // app is ever restarted while input is live it does not silently drop it.
-        AudioSession.reactivate()
+        // `reassert()` rather than `activateForPlayback()`: at cold start the intent is
+        // already playback so the two are identical, and if the app is ever started
+        // while input is live this does not silently drop it. Not a recovery path — no
+        // notification brought us here.
+        AudioSession.reassert()
         buildGraph()
     }
 
@@ -108,13 +109,13 @@ final class SoundBank {
         observers.append(centre.addObserver(
             forName: .AVAudioEngineConfigurationChange,
             object: engine, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.rebuild(freshEngine: false) }
+                MainActor.assumeIsolated { self?.recover(from: .configurationChange) }
             })
 
         observers.append(centre.addObserver(
             forName: AVAudioSession.mediaServicesWereResetNotification,
             object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.rebuild(freshEngine: true) }
+                MainActor.assumeIsolated { self?.recover(from: .mediaServicesReset) }
             })
 
         observers.append(centre.addObserver(
@@ -123,7 +124,7 @@ final class SoundBank {
                 guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
                       let type = AVAudioSession.InterruptionType(rawValue: raw),
                       type == .ended else { return }
-                MainActor.assumeIsolated { self?.rebuild(freshEngine: false) }
+                MainActor.assumeIsolated { self?.recover(from: .interruptionEnded) }
             })
     }
 
@@ -132,23 +133,26 @@ final class SoundBank {
     /// A media services reset invalidates the engine object itself, so that case gets a
     /// new one — and with it new observers, because the configuration-change
     /// notification is posted by a specific engine instance.
-    private func rebuild(freshEngine: Bool) {
+    private func recover(from event: AudioRecovery.Event) {
         guard isStarted else { return }
         tearDownGraph()
-        if freshEngine {
+
+        if AudioRecovery.needsFreshEngine(after: event) {
             for observer in observers { NotificationCenter.default.removeObserver(observer) }
             observers.removeAll()
             engine = AVAudioEngine()
             observeSystemAudioEvents()
         }
-        // Re-assert, never downgrade. The notification that brings us here is most
-        // often the microphone upgrading the session — so calling `activateForPlayback`
-        // here pulled the category back to `.playback` while the user was still holding
-        // Talk, and the microphone then upgraded again. The two engines fought each
-        // other for the whole take.
-        AudioSession.reactivate()
+
+        // Almost always false, and that is the whole point. Touching the session here
+        // after an ordinary configuration change re-posts the notification that brought
+        // us here, and the app freezes. See `AudioRecovery`.
+        if AudioRecovery.needsSessionReassertion(after: event) {
+            AudioSession.reassert()
+        }
+
         buildGraph()
-        log.info("Sound graph rebuilt after a system audio change")
+        log.info("Sound graph rebuilt after \(String(describing: event), privacy: .public)")
     }
 
     // MARK: Playing
