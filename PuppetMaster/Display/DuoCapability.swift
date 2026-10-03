@@ -2,10 +2,10 @@ import Foundation
 
 /// Physical description of a two-surface device.
 ///
-/// Every number here is a **placeholder**. No dual-screen iPhone SDK is public, so
-/// these values are a plausible stand-in used by Duo Rehearsal mode to approximate
-/// the layout — nothing more. When real hardware exists, these come from the SDK and
-/// the rehearsal mode inherits the correction for free.
+/// Every number here is a **placeholder**, used by Duo Rehearsal to approximate the
+/// layout. iPhone Duo is now announced, but iOS gives a non-camera app no second
+/// surface on it (see `UnavailableDuoCapability`), so there is no real geometry to
+/// substitute.
 public struct DuoGeometry: Sendable, Equatable {
     /// Aspect ratio (width / height) of the audience-facing surface.
     public var stageAspect: Double
@@ -26,8 +26,7 @@ public enum DuoAvailability: Sendable, Equatable {
 ///
 /// **This is deliberately the only place in the codebase that knows Duo exists.**
 /// Nothing here guesses at an API: the protocol is written in terms of what the *app*
-/// needs to know, not what a vendor might one day provide. When an SDK ships, the work
-/// is one new conformance plus a presenter — see `ARCHITECTURE.md` §6.4.
+/// needs to know, not what a vendor might provide. See `ARCHITECTURE.md` §6.4.
 @MainActor
 public protocol DuoCapability: AnyObject {
     var availability: DuoAvailability { get }
@@ -45,20 +44,28 @@ extension DuoCapability {
     }
 }
 
-/// What ships today.
+/// What ships today, and — as of the iOS 27.1 SDK — what the platform allows.
 ///
-/// Honest by construction: it reports Duo as unavailable and says why, instead of
-/// pretending to detect hardware that nobody can buy. The app stays fully functional
-/// without it, and Duo Rehearsal mode covers the layout work in the meantime.
+/// iPhone Duo exists (announced September 2026, iOS 27.1, Xcode 27.1 beta has a
+/// simulator). But its outer display is not a second surface an app can draw on. The
+/// only public way to put content there is a *camera capture accessory*, which Apple
+/// documents as available "while the app is in the foreground and has an active camera
+/// capture session". A puppet show is not a camera session, and running one purely to
+/// borrow the screen would mean a camera permission prompt for a children's toy that
+/// never uses the camera — which is the wrong trade even before App Review sees it.
+///
+/// So this stays unavailable, and says so plainly. On iPhone Duo the useful thing is
+/// the large inner display, where Duo Rehearsal already shows the stage and the
+/// controls side by side. See `ARCHITECTURE.md` §6.4.
 @MainActor
 public final class UnavailableDuoCapability: DuoCapability {
     public init() {}
 
     public var availability: DuoAvailability {
         .unavailable(reason: """
-            No dual-screen device or SDK is available. Everything Duo mode needs is \
-            already built and working — the stage and the controls are independent \
-            surfaces driven by one engine. Try Duo Rehearsal to see both at once.
+            On iPhone Duo, iOS only lets camera apps use the outer screen, so the \
+            puppet cannot perform there yet. Open the phone and choose Duo Rehearsal \
+            to put the stage and the controls side by side on the big inner screen.
             """)
     }
 

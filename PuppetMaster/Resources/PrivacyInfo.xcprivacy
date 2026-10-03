@@ -17,8 +17,11 @@
 
 	<!-- Nothing is collected. The app has no backend, no analytics, and makes no
 	     network requests. Microphone audio is measured for loudness in memory and
-	     discarded frame by frame: it is never written to disk and never transmitted,
-	     so under Apple's definition it is not "collected". -->
+	     discarded frame by frame. With a voice effect on, one take (at most eight
+	     seconds) is also held in memory until the puppet has repeated it, then
+	     zeroed. It is never written to disk and never transmitted, so under Apple's
+	     definition it is not "collected" — but this reasoning should be confirmed
+	     before submission (docs/OPEN-QUESTIONS.md, Q1). -->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array/>
 
@@ -27,7 +30,8 @@
 		<dict>
 			<!-- @AppStorage("hasSeenCoachCard") in App/RootView.swift and the
 			     UserDefaults.standard in App/AppEnvironment.swift, which remember
-			     the chosen characters, the backdrop and the duet toggle. -->
+			     the chosen characters, the backdrop, the duet toggle and the voice
+			     effect. -->
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>

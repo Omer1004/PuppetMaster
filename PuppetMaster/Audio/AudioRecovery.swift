@@ -24,6 +24,10 @@ import Foundation
 /// - The second "fixed" that by re-asserting whatever was intended instead — which
 ///   turned a two-party oscillation into a tight self-sustaining loop in one handler.
 ///
+/// A third, quieter copy survived the fix for the second: the microphone's own handler
+/// rebuilt itself through `start()`, which upgrades the session. That is why the rule is
+/// now *enforced* rather than documented — see `handleConfigurationChange(_:)`.
+///
 /// A configuration change says the *graph* is invalid, never the session. The session is
 /// already whatever it should be; that is what caused the notification in the first
 /// place.
@@ -45,8 +49,15 @@ enum AudioRecovery {
 
     /// Whether the `AVAudioEngine` object itself has to be replaced, rather than having
     /// its graph rebuilt in place.
+    ///
+    /// An exhaustive switch, not `event == .mediaServicesReset`: a new event must make
+    /// someone decide, not quietly inherit "no".
     static func needsFreshEngine(after event: Event) -> Bool {
-        event == .mediaServicesReset
+        switch event {
+        case .configurationChange: false
+        case .interruptionEnded:   false
+        case .mediaServicesReset:  true
+        }
     }
 
     /// Whether the audio session has to be configured again.
@@ -59,5 +70,43 @@ enum AudioRecovery {
         case .interruptionEnded:   true
         case .mediaServicesReset:  true
         }
+    }
+
+    /// Whether what `AVAudioSession` reports about its own category can still be
+    /// believed.
+    ///
+    /// After a media services reset it cannot: the server that held the configuration
+    /// is gone, and Apple's guidance is to configure the session from scratch. Skipping
+    /// a category "the session already has" on the strength of a stale read-back would
+    /// leave it in the default `.soloAmbient` — silenced by the ring/silent switch and
+    /// interrupting other apps' audio. An interruption only deactivates the session; its
+    /// category survives.
+    static func sessionStateIsTrustworthy(after event: Event) -> Bool {
+        switch event {
+        case .configurationChange: true
+        case .interruptionEnded:   true
+        case .mediaServicesReset:  false
+        }
+    }
+
+    // MARK: Enforcing the rule
+
+    /// True while a configuration-change handler is running. `AudioSession` refuses to
+    /// upgrade or re-apply anything while it is set.
+    @MainActor private(set) static var isHandlingConfigurationChange = false
+
+    /// Every `AVAudioEngineConfigurationChange` handler in the app runs inside this.
+    ///
+    /// A rule that has been broken three times by careful people is not one to leave to
+    /// comments. Inside here, `AudioSession` refuses upgrades and re-assertions and logs
+    /// a `fault` naming the mistake — the loop cannot start, and the attempt is visible.
+    /// A downgrade to playback is still allowed: it is how a failed rebuild hands the
+    /// session back, and it cannot sustain a loop on its own, because once the session
+    /// is `.playback` the next one is skipped.
+    @MainActor static func handleConfigurationChange(_ body: () -> Void) {
+        let outer = isHandlingConfigurationChange
+        isHandlingConfigurationChange = true
+        defer { isHandlingConfigurationChange = outer }
+        body()
     }
 }

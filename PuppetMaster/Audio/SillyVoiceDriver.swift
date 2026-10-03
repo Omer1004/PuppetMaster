@@ -8,6 +8,17 @@ import Foundation
 /// regular immediately reads as a machine rather than a character.
 struct SillyVoiceDriver {
 
+    /// A syllable that has just begun, for anything that wants to voice it.
+    struct Syllable: Equatable {
+        let duration: Double
+        /// How wide the mouth opens, 0…1. Doubles as how loud to say it.
+        let peak: Double
+    }
+
+    /// Set on the update a syllable starts, cleared on the next. Read it once per frame,
+    /// right after `update(delta:)` — that is what keeps the sound on the mouth.
+    private(set) var onset: Syllable?
+
     private var time: Double = 0
     private var isSpeaking = false
     private var syllableStart: Double = 0
@@ -22,11 +33,13 @@ struct SillyVoiceDriver {
         syllableDuration = 0
         syllablePeak = 0
         gapEnd = 0
+        onset = nil
     }
 
     /// Advance and return the current 0…1 jaw drive.
     mutating func update(delta: Double) -> Double {
         time += delta
+        onset = nil
 
         if isSpeaking, time - syllableStart >= syllableDuration {
             isSpeaking = false
@@ -40,6 +53,7 @@ struct SillyVoiceDriver {
             syllableStart = time
             syllableDuration = Double.random(in: 0.10...0.26)
             syllablePeak = Double.random(in: 0.45...1.0)
+            onset = Syllable(duration: syllableDuration, peak: syllablePeak)
         }
 
         guard isSpeaking, syllableDuration > 0 else { return 0 }

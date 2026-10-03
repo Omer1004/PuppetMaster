@@ -122,8 +122,34 @@ Phase 0 is cheap precisely so that stopping is cheap.
 This phase is the insurance policy on the Duo bet. If the abstraction is wrong, we
 find out here, on shipping hardware, for a fraction of the cost.
 
-### Phase 3 — Duo integration *(blocked — cannot be scheduled)*
-**Entry condition: public Duo SDK and a simulator or device.**
+### Phase 3 — Duo integration *(re-scoped, October 2026)*
+**Entry condition: public Duo SDK and a simulator or device.** *Met in beta:* iPhone
+Duo was announced on 9 September 2026 and ships 23 October on iOS 27.1. Xcode 27.1 beta
+has the SDK and a Duo simulator.
+
+**What the SDK says.** An app gets no general second surface on Duo's outer display.
+The only public way to put content there is `CameraCaptureAccessory` /
+`UISceneAccessory.cameraCapture`, and Apple documents it as available only "while the
+app is in the foreground and has an active camera capture session". So the plan below,
+"stage on the outer screen", is not possible for this app. Starting a camera session
+just to borrow the screen is ruled out: it puts a camera prompt in a children's toy
+that never uses the camera.
+
+**What Duo support means now:**
+- Build with the iOS 27.1 SDK so the app fills the inner display (older SDKs run in a
+  phone-shaped canvas there)
+- Check `StageLayout` and Duo Rehearsal in the Duo simulator, in every pose — the
+  threshold in `StageLayout` was a guess about the inner screen's shape
+- Consider `UIHingeInteraction` (iOS 27.1, beta): stage above the fold and controls
+  below when the phone is half-open. *Not started:* it is beta API, and CI's Xcode
+  cannot compile it yet
+- Keep the outer-screen idea in the PRD, but as an open question for Apple, not a plan
+
+**Found on the way, and fixed:** from iOS 27, an app only gets an external-display
+scene after it registers a scene accessory. Big Screen relied on `Info.plist` alone and
+would have silently stopped working. `MainSceneDelegate` now registers one.
+
+The original plan, kept for the record:
 
 - Read the actual SDK. Discard every assumption in this repo that it contradicts
 - Add a `duo` case to `StageRouter` and a layout for the real inner-screen dimensions.
@@ -133,7 +159,7 @@ find out here, on shipping hardware, for a fraction of the cost.
 - If the abstraction holds, this is small. If it does not, Phase 2 will already have
   told us why
 
-**No work in this phase starts before the SDK is public.**
+~~**No work in this phase starts before the SDK is public.**~~ It is public, in beta.
 
 ### Phase 4 — Polish and App Store release *(~2–3 weeks)*
 - Performance pass on the oldest supported device; hold 60 fps under load

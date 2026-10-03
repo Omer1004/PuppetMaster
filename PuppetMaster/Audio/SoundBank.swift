@@ -24,6 +24,20 @@ final class SoundBank {
     private var observers: [any NSObjectProtocol] = []
     private let log = Logger(subsystem: "com.omerwm.puppetmaster", category: "sound")
 
+    /// A repeated microphone take has its own player, because it is the one sound that
+    /// is pitch-shifted at playback: `AVAudioUnitTimePitch` keeps the duration, so the
+    /// puppet's mouth stays on the words. Rebuilt with the rest of the graph.
+    private var takePlayer = AVAudioPlayerNode()
+    private var takePitch = AVAudioUnitTimePitch()
+    private var currentTake: CurrentTake?
+
+    private struct CurrentTake {
+        let take: PreparedTake
+        let buffer: AVAudioPCMBuffer
+        /// Monotonic, for the backstop in `takePosition()`.
+        var startedAt: TimeInterval
+    }
+
     /// Honours the app's sound setting. Off means silent, not quieter.
     var isEnabled = true {
         didSet { if !isEnabled { stopAll() } }
@@ -41,17 +55,18 @@ final class SoundBank {
         guard !isStarted else { return }
         isStarted = true
         observeSystemAudioEvents()
-        // `reassert()` rather than `activateForPlayback()`: at cold start the intent is
-        // already playback so the two are identical, and if the app is ever started
-        // while input is live this does not silently drop it. Not a recovery path — no
-        // notification brought us here.
-        AudioSession.reassert()
+        // Not a recovery path — no notification brought us here — so `establish()`, not
+        // `reassert(after:)`.
+        AudioSession.establish()
         buildGraph()
     }
 
     func stop() {
         guard isStarted else { return }
         isStarted = false
+        // A take must not survive the app going away: `buildGraph()` would replay it on
+        // return, and holding it in the background breaks "kept only until repeated".
+        stopTake()
         tearDownGraph()
     }
 
@@ -62,11 +77,22 @@ final class SoundBank {
             engine.connect(player, to: engine.mainMixerNode, format: Self.format)
             players.append(player)
         }
+
+        takePlayer = AVAudioPlayerNode()
+        takePitch = AVAudioUnitTimePitch()
+        engine.attach(takePlayer)
+        engine.attach(takePitch)
+        engine.connect(takePlayer, to: takePitch, format: Self.format)
+        engine.connect(takePitch, to: engine.mainMixerNode, format: Self.format)
+
         engine.prepare()
 
         do {
             try engine.start()
             for player in players { player.play() }
+            // A rebuild mid-take starts the take again rather than dropping it. The jaw
+            // follows the player's own clock, so it starts again with it.
+            if currentTake != nil { scheduleCurrentTake() }
         } catch {
             // No sound is a smaller loss than a crash; the puppet still performs.
             log.error("Sound engine did not start: \(error.localizedDescription)")
@@ -80,6 +106,9 @@ final class SoundBank {
         }
         players.removeAll()
         nextPlayer = 0
+        takePlayer.stop()
+        engine.detach(takePlayer)
+        engine.detach(takePitch)
         engine.stop()
     }
 
@@ -93,6 +122,7 @@ final class SoundBank {
             player.stop()
             if running { player.play() }
         }
+        stopTake()
     }
 
     // MARK: Surviving the system
@@ -109,7 +139,9 @@ final class SoundBank {
         observers.append(centre.addObserver(
             forName: .AVAudioEngineConfigurationChange,
             object: engine, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.recover(from: .configurationChange) }
+                MainActor.assumeIsolated {
+                    AudioRecovery.handleConfigurationChange { self?.recover(from: .configurationChange) }
+                }
             })
 
         observers.append(centre.addObserver(
@@ -148,7 +180,7 @@ final class SoundBank {
         // after an ordinary configuration change re-posts the notification that brought
         // us here, and the app freezes. See `AudioRecovery`.
         if AudioRecovery.needsSessionReassertion(after: event) {
-            AudioSession.reassert()
+            AudioSession.reassert(after: event)
         }
 
         buildGraph()
@@ -172,6 +204,72 @@ final class SoundBank {
         player.scheduleBuffer(buffer, at: nil, options: .interrupts)
     }
 
+    // MARK: Silly Voice, out loud
+
+    /// Say one syllable of the silly voice. Called on the frame the mouth starts to
+    /// open, and shaped like the mouth — snap open, slower close — so the two read as
+    /// one thing.
+    func babble(_ syllable: SillyVoiceDriver.Syllable, pitch: Double, effect: VoiceEffect) {
+        guard effect.babblesAloud, isEnabled, isStarted, engine.isRunning,
+              !players.isEmpty else { return }
+
+        // Bucketed like every other sound, so the cache stays small: 20 ms of duration,
+        // a twentieth of pitch, and one of three inflections.
+        let duration = max(0.04, (syllable.duration * 50).rounded() / 50)
+        let voice = ((pitch * effect.babblePitch).clamped(to: 0.3...3) * 20).rounded() / 20
+        let contour = effect.isMonotone ? 0 : Int.random(in: 0..<3)
+        let key = "babble-\(effect.rawValue)-\(duration)-\(voice)-\(contour)"
+
+        let buffer: AVAudioPCMBuffer
+        if let cached = cache[key] {
+            buffer = cached
+        } else {
+            let samples = Synth.normalised(
+                Self.renderSyllable(duration: duration, pitch: voice, contour: contour,
+                                    effect: effect),
+                peak: 0.5)
+            guard let made = Self.makeBuffer(samples) else { return }
+            cache[key] = made
+            buffer = made
+        }
+
+        let player = players[nextPlayer]
+        nextPlayer = (nextPlayer + 1) % players.count
+        player.volume = Float(0.45 + 0.55 * syllable.peak.clamped(to: 0...1))
+        if !player.isPlaying { player.play() }
+        player.scheduleBuffer(buffer, at: nil, options: .interrupts)
+    }
+
+    /// One babbled syllable. Pure maths, like everything else in the bank.
+    static func renderSyllable(duration d: Double, pitch p: Double, contour: Int,
+                               effect: VoiceEffect) -> [Float] {
+        let base = 240 * p
+        var samples = Synth.tone(
+            duration: d,
+            frequency: { t in
+                let x = min(t / d, 1)
+                switch contour {
+                case 1:  return base * (1.18 - 0.30 * x)                 // falling: a statement
+                case 2:  return base * (1 + 0.05 * sin(2 * .pi * 6 * t)) // wavering
+                default: return base * (0.92 + 0.22 * x)                 // rising: a question
+                }
+            },
+            amplitude: { t in
+                let x = min(t / d, 1)
+                return x < 0.3
+                    ? Easing.easeOut.apply(x / 0.3)
+                    : 1 - Easing.easeInOut.apply((x - 0.3) / 0.7)
+            },
+            // More second harmonic for the low voice: a phone speaker barely reproduces
+            // the fundamental down there, and the harmonic is what you actually hear.
+            harmonic: effect == .rumbly ? 0.8 : 0.5)
+        if let hz = effect.ringModulationHz {
+            samples = VoiceEffectDSP.ringModulate(samples, sampleRate: Synth.sampleRate,
+                                                  frequency: hz)
+        }
+        return samples
+    }
+
     // MARK: Generation
 
     private func buffer(for sound: SoundID, pitch: Double) -> AVAudioPCMBuffer? {
@@ -181,14 +279,19 @@ final class SoundBank {
         if let cached = cache[key] { return cached }
 
         let samples = Synth.normalised(Self.render(sound, pitch: bucket), peak: peak(for: sound))
+        guard let buffer = Self.makeBuffer(samples) else { return nil }
+        cache[key] = buffer
+        return buffer
+    }
+
+    private static func makeBuffer(_ samples: [Float]) -> AVAudioPCMBuffer? {
         guard !samples.isEmpty,
-              let buffer = AVAudioPCMBuffer(pcmFormat: Self.format,
+              let buffer = AVAudioPCMBuffer(pcmFormat: format,
                                             frameCapacity: AVAudioFrameCount(samples.count)),
               let channel = buffer.floatChannelData?[0] else { return nil }
 
         for i in 0..<samples.count { channel[i] = samples[i] }
         buffer.frameLength = AVAudioFrameCount(samples.count)
-        cache[key] = buffer
         return buffer
     }
 
@@ -317,5 +420,62 @@ final class SoundBank {
                               frequency: { 900 * p * (1 - $0 * 3) },
                               amplitude: { Synth.decay($0, 0.03, attack: 0.001, power: 5) })
         }
+    }
+}
+
+// MARK: - Repeating a take
+
+extension SoundBank: TakePlayer {
+
+    func playTake(_ take: PreparedTake) -> Bool {
+        guard isEnabled, isStarted, engine.isRunning,
+              let buffer = Self.makeBuffer(take.samples) else { return false }
+        currentTake = CurrentTake(take: take, buffer: buffer,
+                                  startedAt: ProcessInfo.processInfo.systemUptime)
+        scheduleCurrentTake()
+        return true
+    }
+
+    func stopTake() {
+        currentTake = nil
+        takePlayer.stop()
+    }
+
+    func takePosition() -> Double? {
+        guard let current = currentTake else { return nil }
+
+        // Backstop: if the player's clock is never available — the engine stopped and
+        // did not come back — do not report a take as playing forever. The puppet's
+        // mouth would hang open.
+        let elapsed = ProcessInfo.processInfo.systemUptime - current.startedAt
+        guard elapsed < current.take.duration + 1 else {
+            stopTake()
+            return nil
+        }
+
+        // The player's own clock, not the wall clock: it is what the listener hears, and
+        // it pauses while the engine is being rebuilt.
+        var position = 0.0
+        if engine.isRunning,
+           let nodeTime = takePlayer.lastRenderTime,
+           let playerTime = takePlayer.playerTime(forNodeTime: nodeTime),
+           playerTime.sampleRate > 0 {
+            position = Double(playerTime.sampleTime) / playerTime.sampleRate
+        }
+        guard position < current.take.duration else {
+            stopTake()
+            return nil
+        }
+        return max(0, position)
+    }
+
+    private func scheduleCurrentTake() {
+        guard var current = currentTake, engine.isRunning else { return }
+        takePitch.pitch = Float(current.take.effect.repeatSemitones * 100)   // cents
+        takePlayer.stop()
+        takePlayer.scheduleBuffer(current.buffer, at: nil, options: .interrupts)
+        takePlayer.play()
+        current.startedAt = ProcessInfo.processInfo.systemUptime
+        currentTake = current
     }
 }

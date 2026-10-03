@@ -245,6 +245,12 @@ USER TAPS AN ACTION ──────────► puppet performs immediatel
 
 ## 8. Future: the Duo experience
 
+> **Update, October 2026.** iPhone Duo is real (iOS 27.1). Its SDK does **not** let a
+> non-camera app draw on the outer display; that is reserved for camera apps with an
+> active capture session. The "outer screen → stage" experience below is therefore not
+> buildable today. On Duo, the product is Duo Rehearsal on the large inner screen. The
+> intent below stays as the thing to ask Apple for. See ROADMAP Phase 3.
+
 **We are designing for it, not building on it.** No Duo-specific API is assumed,
 referenced, or stubbed against a guessed signature. Everything below is a product
 intention to be validated once hardware and an SDK exist.

@@ -8,8 +8,10 @@ import SwiftUI
 /// It attaches through the standard external-display scene role — no private API, no
 /// mirroring hacks — and it proves the stage/controls split on hardware that exists.
 ///
-/// The system creates this scene by itself when a display is connected, because
-/// `Info.plist` declares the `externalDisplayNonInteractive` role.
+/// On iOS 26 the system creates this scene by itself when a display is connected,
+/// because `Info.plist` declares the `externalDisplayNonInteractive` role. From iOS 27 it
+/// only does so for an app that has registered a scene accessory — see
+/// `MainSceneDelegate.registerStageAccessory(on:)`.
 final class ExternalDisplaySceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?

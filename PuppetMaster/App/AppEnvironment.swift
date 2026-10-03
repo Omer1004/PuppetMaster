@@ -48,6 +48,7 @@ final class AppEnvironment {
             default:      break
             }
         }
+        voice.takePlayer = sound
         restoreChoices()
         clock = EngineClock { [weak self] delta in self?.frame(delta) }
         applyReduceMotion()
@@ -64,6 +65,12 @@ final class AppEnvironment {
         // Your voice drives the puppet you are holding, not both of them — a duet where
         // both mouths move to one voice looks like a glitch, not a conversation.
         troupe.send(.setJawDrive(voice.level(delta: delta)))
+        // Silly Voice out loud: one syllable per mouth movement, in the focused
+        // puppet's own voice, started on the same frame the mouth starts to open.
+        if let syllable = voice.syllableOnset {
+            sound.babble(syllable, pitch: engine.character.personality.voicePitch,
+                         effect: voice.effect)
+        }
         troupe.tick(delta: delta)
     }
 
@@ -95,6 +102,12 @@ final class AppEnvironment {
         defaults.set(id, forKey: Key.character(slot: troupe.focusIndex))
     }
 
+    /// One voice for the performer, whichever puppet they are holding.
+    func selectVoiceEffect(_ effect: VoiceEffect) {
+        voice.effect = effect
+        defaults.set(effect.rawValue, forKey: Key.voiceEffect)
+    }
+
     /// Staging is shared: two puppets on one stage cannot stand under two skies.
     func selectBackdrop(_ backdrop: Backdrop) {
         troupe.setBackdrop(backdrop)
@@ -109,6 +122,10 @@ final class AppEnvironment {
         }
         if let id = defaults.string(forKey: Key.backdrop) {
             troupe.setBackdrop(BackdropLibrary.backdrop(id: id))
+        }
+        if let raw = defaults.string(forKey: Key.voiceEffect),
+           let effect = VoiceEffect(rawValue: raw) {
+            voice.effect = effect
         }
         // The duet comes back before its second character does: `setDuet` picks a
         // stand-in for the empty slot, and the remembered choice then replaces it.
@@ -125,6 +142,7 @@ final class AppEnvironment {
         }
         static let backdrop = "selectedBackdrop"
         static let duet = "duetMode"
+        static let voiceEffect = "voiceEffect"
     }
 
     // MARK: Clock

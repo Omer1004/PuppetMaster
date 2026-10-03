@@ -61,10 +61,11 @@ open PuppetMaster.xcodeproj
 - **Tech:** Swift · SwiftUI · SpriteKit for the stage · AVFoundation for voice ·
   **zero third-party dependencies** · no backend.
 - **Duo:** stage and controls are genuinely independent surfaces driven by one engine.
-  **Duo Rehearsal runs both at once today**, on the same code path a two-screen device
-  would use, and an external display already gets a chrome-free stage through the
-  standard scene role. **No Duo-specific API is assumed or written** — the vendor seam
-  is one protocol with one honest "not available yet" implementation.
+  **Duo Rehearsal runs both at once today**, and an external display gets a chrome-free
+  stage through the standard scene role. iPhone Duo is now announced (iOS 27.1), and its
+  SDK settles one question: **iOS only lets camera apps use the outer screen**, so
+  "stage on the outer screen" is not possible for this app. On Duo, Duo Rehearsal on
+  the big inner screen is the experience — see ROADMAP Phase 3.
 - **Next step:** run it on a real device and test the microphone (the Simulator cannot),
   then put it in front of children. Phase 0's exit gate is whether they laugh.
 
@@ -80,6 +81,10 @@ Xcode 27.0 · Swift 6.4 · iOS 27.0 SDK · proposed deployment target iOS 26.0
 | Two puppets side by side | `PuppetMaster/App/Troupe.swift`, `PuppetMaster/Stage/StagePerformer.swift`, ARCHITECTURE §11 |
 | Redrawn cast (felt material, lit forms, faces) | `PuppetMaster/Stage/PuppetRig.swift`, `CharacterDescriptor.Surface` |
 | Tip jar | `PuppetMaster/Support/TipJar.swift`, `Config/PuppetMaster.storekit` |
+| Voice effects: Silly Voice out loud, and the puppet repeats you | `PuppetMaster/Core/Model/VoiceEffect.swift`, `PuppetMaster/Audio/VoiceEffectDSP.swift`, ARCHITECTURE §5.2 |
+| Audio freeze rule enforced in code, plus 7 review fixes | [docs/MIC-CRASH.md](docs/MIC-CRASH.md) (round four) |
+| iPhone Duo: what the real SDK allows (outer screen is camera-only) | ROADMAP Phase 3, ARCHITECTURE §6.4 |
+| Big Screen on iOS 27 (scene accessory registration) | `PuppetMaster/App/MainSceneDelegate.swift` |
 | What is and is not verified | [docs/PROTOTYPE.md](docs/PROTOTYPE.md) |
 
 > ⚠️ The tip jar and the Kids Category need a decision together before submission —
