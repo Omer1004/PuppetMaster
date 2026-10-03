@@ -25,10 +25,14 @@ struct TalkButton: View {
                     .animation(.linear(duration: 0.05), value: voice.displayLevel)
 
                 HStack(spacing: 9) {
-                    Image(systemName: voice.talkButtonSymbol)
+                    // While the puppet repeats you, say so — otherwise a voice coming out
+                    // of the phone with nobody touching it is a surprise.
+                    Image(systemName: voice.isRepeating ? "repeat" : voice.talkButtonSymbol)
                         .font(.system(.title3).weight(.semibold))
-                    Text(voice.talkButtonTitle)
+                    Text(voice.isRepeating ? "\(characterName) is repeating you" : voice.talkButtonTitle)
                         .font(.system(.callout).weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 .foregroundStyle(Theme.label)
                 .frame(maxWidth: .infinity)
@@ -58,6 +62,8 @@ struct TalkButton: View {
         .frame(height: barHeight)
         .accessibilityElement()
         .accessibilityLabel(voice.talkButtonTitle)
-        .accessibilityHint("Touch and hold. \(characterName)'s mouth follows your voice.")
+        .accessibilityHint(voice.effect.repeatsYou
+            ? "Touch and hold. \(characterName)'s mouth follows your voice, then repeats what you said."
+            : "Touch and hold. \(characterName)'s mouth follows your voice.")
     }
 }

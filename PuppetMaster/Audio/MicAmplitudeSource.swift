@@ -29,18 +29,31 @@ final class MicAmplitudeSource {
 
     /// The system reconfigured the audio hardware and this engine must be rebuilt.
     /// Owned by `VoiceInput`, which is the only thing that knows whether a take is in
-    /// progress and what to fall back to.
-    var onNeedsRestart: (() -> Void)?
+    /// progress and what to fall back to. Carries the event, because what a rebuild may
+    /// do depends on it — after a plain configuration change it must not touch the
+    /// session at all.
+    var onNeedsRestart: ((AudioRecovery.Event) -> Void)?
 
     /// A phone call, Siri or an alarm took the input away mid-performance.
     var onInterrupted: (() -> Void)?
 
-    /// Quietest level treated as silence. Below this the mouth stays shut, so room
-    /// noise does not leave the puppet permanently mumbling.
-    private let floorDB: Double = -52
-    private let ceilingDB: Double = -12
-
     private(set) var isRunning = false
+
+    /// Keep this take in memory so the puppet can repeat it. Set before `start()`; with
+    /// it off — the default — samples are measured and discarded exactly as before.
+    var keepsTake = false
+    /// Allocated once. 48 kHz is the highest rate the built-in microphone runs at here;
+    /// at a lower rate the same buffer simply holds a little longer.
+    private let take = TakeBuffer(capacity: Int(VoiceEffectDSP.maximumDuration * 48_000))
+
+    /// Rebuilds since the current take began.
+    ///
+    /// A route change costs one; a second is unusual. More than this means the
+    /// hardware keeps moving under every rebuild — the shape of a loop — and the take
+    /// gives up on the microphone and carries on in the silly voice. Counted per take
+    /// rather than per second, so nothing a child does with the button can trip it.
+    private var rebuildsThisTake = 0
+    private static let rebuildLimit = 3
 
     init() { observeSystemAudioEvents() }
 
@@ -88,6 +101,9 @@ final class MicAmplitudeSource {
         // to `.playAndRecord` and then threw, leaving the whole app looking like a
         // recording app until it was killed.
         guard Self.isInputUsable else { throw MicError.noInputAvailable }
+        rebuildsThisTake = 0
+        // A new press is a new take. Anything left from the last one is not repeated.
+        take.discard()
 
         do {
             try AudioSession.activateForRecording()
@@ -126,8 +142,9 @@ final class MicAmplitudeSource {
         removeTap()
 
         let box = self.box
-        let floorDB = self.floorDB
-        let ceilingDB = self.ceilingDB
+        let take = self.take
+        // Before the tap exists, so the audio thread never sees a half-set take.
+        take.begin(sampleRate: tapFormat.sampleRate, keep: keepsTake)
 
         // --- audio thread below this line: no allocation, no locks, no await ---
         input.installTap(onBus: 0, bufferSize: 1024, format: tapFormat) { buffer, _ in
@@ -138,11 +155,9 @@ final class MicAmplitudeSource {
             var sum: Float = 0
             for i in 0..<count { sum += channel[i] * channel[i] }
             let rms = Double((sum / Float(count)).squareRoot())
-
-            let db = rms > 0 ? 20 * log10(rms) : -160
-            let normalised = ((db - floorDB) / (ceilingDB - floorDB)).clamped(to: 0...1)
-            // Slight curve: quiet speech should still open the mouth a useful amount.
-            box.store(pow(normalised, 0.75))
+            box.store(JawLevel.from(rms: rms))
+            // A no-op unless a repeating voice effect is chosen.
+            take.append(channel, count: count)
         }
         isTapped = true
         installedTapFormat = tapFormat
@@ -183,6 +198,11 @@ final class MicAmplitudeSource {
     /// Most recent loudness, 0…1. Read once per frame from the main thread.
     var level: Double { isRunning ? box.load() : 0 }
 
+    /// The take just finished, handed over once. Call after `stop()`.
+    func collectTake() -> (samples: [Float], sampleRate: Double) {
+        take.drain()
+    }
+
     // MARK: Surviving the system
 
     /// The hardware is not ours. Phone calls, Siri, alarms, headphones being plugged in
@@ -195,13 +215,15 @@ final class MicAmplitudeSource {
         observers.append(centre.addObserver(
             forName: .AVAudioEngineConfigurationChange,
             object: engine, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.handleConfigurationChange() }
+                MainActor.assumeIsolated {
+                    AudioRecovery.handleConfigurationChange { self?.handleConfigurationChange() }
+                }
             })
 
         observers.append(centre.addObserver(
             forName: AVAudioSession.mediaServicesWereResetNotification,
             object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.onNeedsRestart?() }
+                MainActor.assumeIsolated { self?.onNeedsRestart?(.mediaServicesReset) }
             })
 
         observers.append(centre.addObserver(
@@ -233,7 +255,7 @@ final class MicAmplitudeSource {
         guard isRunning else { return }
 
         guard let installed = installedTapFormat else {
-            onNeedsRestart?()
+            onNeedsRestart?(.configurationChange)
             return
         }
 
@@ -243,7 +265,7 @@ final class MicAmplitudeSource {
                                       hardwareSampleRate: hardware.sampleRate,
                                       hardwareChannels: hardware.channelCount) else {
             log.info("Hardware format moved under the tap — rebuilding")
-            onNeedsRestart?()
+            onNeedsRestart?(.configurationChange)
             return
         }
 
@@ -253,29 +275,65 @@ final class MicAmplitudeSource {
             try engine.start()
         } catch {
             log.error("Engine would not restart in place: \(error.localizedDescription)")
-            onNeedsRestart?()
+            onNeedsRestart?(.configurationChange)
         }
     }
 
-    /// Rebuild from nothing. Everything in the old graph may be invalid.
-    func restartAfterSystemChange() -> Bool {
+    /// Rebuild after the system pulled the graph apart. Returns whether the microphone
+    /// is running again.
+    ///
+    /// **Never through `start()`.** That upgrades the session, and the commonest caller
+    /// is a configuration-change handler — the one place the session must not be
+    /// touched (see `AudioRecovery`). The first version of this did exactly that, and
+    /// only a skip deep inside `AudioSession` stood between it and the freeze. Now the
+    /// event decides: a configuration change rebuilds the graph and nothing else; a
+    /// media services reset gets a fresh engine and has the session re-asserted first,
+    /// because the reset took it away.
+    func restart(after event: AudioRecovery.Event) -> Bool {
         let wasRunning = isRunning
         removeTap()
         engine.stop()
-        engine = AVAudioEngine()
         isRunning = false
-        // A fresh engine needs fresh observers: the configuration-change notification is
-        // posted by a specific engine object, and the old one is gone.
-        for observer in observers { NotificationCenter.default.removeObserver(observer) }
-        observers.removeAll()
-        observeSystemAudioEvents()
+
+        if AudioRecovery.needsFreshEngine(after: event) {
+            engine = AVAudioEngine()
+            // A fresh engine needs fresh observers: the configuration-change
+            // notification is posted by a specific engine object, and the old one is gone.
+            for observer in observers { NotificationCenter.default.removeObserver(observer) }
+            observers.removeAll()
+            observeSystemAudioEvents()
+        }
 
         guard wasRunning else { return false }
+
+        rebuildsThisTake += 1
+        guard rebuildsThisTake <= Self.rebuildLimit else {
+            log.fault("Microphone rebuilt \(self.rebuildsThisTake, privacy: .public) times in one take — giving up on it until the next press rather than risk a loop")
+            unwind()
+            return false
+        }
+
+        if AudioRecovery.needsSessionReassertion(after: event) {
+            AudioSession.reassert(after: event)
+        }
+
+        // This path never upgrades the session; it only uses an upgrade that is still in
+        // place. If the session is not configured for input, reading the input node is
+        // the abort this file exists to avoid.
+        guard AudioSession.isConfiguredForRecording, Self.isInputUsable else {
+            log.error("Microphone not rebuilt after \(String(describing: event), privacy: .public): no input configured")
+            unwind()
+            return false
+        }
+
         do {
-            try start()
+            try beginTap()
             return true
         } catch {
             log.error("Microphone did not survive a system audio change: \(error.localizedDescription)")
+            // Hands the session back. Allowed inside a configuration-change handler: a
+            // downgrade cannot loop on its own.
+            unwind()
             return false
         }
     }

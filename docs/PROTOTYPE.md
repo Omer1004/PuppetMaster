@@ -223,3 +223,36 @@ Unchanged from before, plus two new entries:
 - External display, haptics, landscape, VoiceOver and the accessibility text sizes
   actually switched on. (CI is the exception in that list: it runs on every push to
   main and has passed on every commit.)
+
+---
+
+## Update — voice effects, the audio rule enforced, and what iPhone Duo allows
+
+Written in a Linux environment with **no Xcode and no Swift compiler**. None of the
+following has been compiled locally; CI on the pull request is the first build.
+
+### Added
+- **Voice effects** (Stage sheet → Voice): Off, Squeaky, Rumbly, Robot. Silly Voice
+  babbles out loud in the chosen voice. With the microphone, the puppet repeats your
+  take back in that voice after you let go. Off behaves exactly as before.
+- **Big Screen on iOS 27** — a scene accessory registration, without which iOS 27
+  never hands the app an external-display scene.
+- **Duo, honestly** — the unavailable reason now says why (outer screen is camera-only)
+  and what to do instead (Duo Rehearsal on the inner screen).
+
+### Fixed — see docs/MIC-CRASH.md, round four
+- The microphone's rebuild path no longer touches the audio session from a
+  configuration-change handler, and `AudioSession` now refuses any upgrade made from
+  inside one.
+- Six smaller session bugs from the same review.
+
+### NOT verified
+| Thing | Why not | What it needs |
+|---|---|---|
+| **Compiles at all** | No toolchain here | CI on the PR |
+| **The puppet repeats you** | Microphone path is device-only | A real device. Listen for: delay before the repeat, jaw on the words, no clicks, repeat stops when Talk is pressed again |
+| **Babble sounds good** | Synthesised by ear-less maths. Rumbly is low enough that a phone speaker may lose it | Two minutes in the Simulator with sound on |
+| **Big Screen on iOS 27** | No display, and iOS 27 behaviour is from Apple's docs | A display and an iOS 27 device |
+| **The audio fixes** | Same as every audio fix before them | Device: Talk with headphones plugged in mid-take; a phone call during a take |
+| **Layout on iPhone Duo** | Needs Xcode 27.1 beta | The Duo simulator, every pose |
+

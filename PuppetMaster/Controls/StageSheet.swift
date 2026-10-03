@@ -35,6 +35,21 @@ struct StageSheet: View {
                         """)
                 }
 
+                Section {
+                    ForEach(VoiceEffect.allCases) { effect in
+                        voiceRow(for: effect)
+                    }
+                } header: {
+                    Text("Voice")
+                } footer: {
+                    Text("""
+                        With an effect on, Silly Voice babbles out loud, and after you \
+                        let go of Talk the puppet repeats what you said. Your voice is \
+                        held in memory only until it has been repeated — never saved, \
+                        never sent anywhere.
+                        """)
+                }
+
                 // Last, small, and unlabelled as anything urgent. It is a tip jar on the
                 // way out, not a checkout on the way in.
                 Section {
@@ -97,6 +112,40 @@ struct StageSheet: View {
         .buttonStyle(.plain)
         .disabled(!available)
         .opacity(available ? 1 : 0.55)
+    }
+
+    private func voiceRow(for effect: VoiceEffect) -> some View {
+        Button {
+            environment.selectVoiceEffect(effect)
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: effect.symbol)
+                    .font(.system(.title3))
+                    .frame(width: 30)
+                    .foregroundStyle(Theme.accent)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(effect.title)
+                        .font(.system(.callout).weight(.semibold))
+                    Text(effect.summary)
+                        .font(.system(.caption))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                if environment.voice.effect == effect {
+                    Image(systemName: "checkmark")
+                        .font(.system(.footnote).weight(.bold))
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(environment.voice.effect == effect ? .isSelected : [])
     }
 
     private func backdropRow(for backdrop: Backdrop) -> some View {

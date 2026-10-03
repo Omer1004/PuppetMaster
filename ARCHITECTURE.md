@@ -240,7 +240,26 @@ the privacy story simple: *we measure loudness, we do not listen to words.*
 touches Swift concurrency primitives. Asymmetric smoothing (fast attack ~20 ms, slow
 release ~80 ms) is what makes the mouth look like a mouth rather than a VU meter.
 
-### 5.2 Voice effects
+### 5.2 Voice effects — built
+
+> **Built, October 2026, as two features on one setting** (`VoiceEffect`: Off,
+> Squeaky, Rumbly, Robot, chosen in the Stage sheet):
+>
+> - **Silly Voice out loud.** `SillyVoiceDriver` reports each syllable's onset, and
+>   `SoundBank.babble` synthesises one syllable on that frame, shaped like the mouth
+>   movement. No recording involved.
+> - **The puppet repeats you.** While Talk is held, `TakeBuffer` copies samples on the
+>   audio thread (preallocated, lock-free, at most 8 s). On release the take is trimmed,
+>   resampled, ring-modulated for Robot, and played through an `AVAudioUnitTimePitch`.
+>   That keeps the duration, so the jaw follows a precomputed envelope against the
+>   player's own clock. The take lives in memory only and is zeroed after use. With
+>   **Off**, nothing is kept, exactly as before.
+>
+> The privacy wording in `Info.plist` and `PrivacyInfo.xcprivacy` changed with it.
+> "Never recorded" is no longer true when an effect is on. Whether Apple counts the
+> in-memory take as "collected" should be confirmed before submission (Q1).
+>
+> The original design note follows.
 
 For the "puppet repeats what you said" feature: buffer the held-to-talk audio, then
 replay it through an `AVAudioEngine` graph with `AVAudioUnitTimePitch` (pitch shift)
@@ -339,6 +358,20 @@ written and wired but unexercised. Until someone plugs a display in, Big Screen 
 out of committed scope.
 
 ### 6.4 Duo: what we will and will not do
+
+> **Update, October 2026: the SDK exists, and it changes the answer.** iPhone Duo runs
+> iOS 27.1, and Xcode 27.1 beta has its SDK and simulator. iOS does not give a
+> non-camera app the outer display. The only route there is a camera capture accessory,
+> which requires "an active camera capture session" (Apple's documentation for
+> `CameraCaptureAccessory`). `UnavailableDuoCapability` now says this to the user and
+> points them at Duo Rehearsal on the inner screen. The `.duo` mode stays in the enum,
+> disabled and explained, in case Apple opens the outer display up later. Details and
+> what Duo support means now are in ROADMAP Phase 3.
+>
+> **Separately: Big Screen needed a change for iOS 27.** From iOS 27 an app receives a
+> `windowExternalDisplayNonInteractive` scene "only after it registers a scene
+> accessory" (Apple, *Presenting content on a connected display*). `MainSceneDelegate`
+> registers one on the root controller. The `Info.plist` role stays for iOS 26.
 
 **Will:** keep Stage and Controls independently renderable; ship Two Devices mode so
 that separation is exercised by real users on real hardware; keep all presenter

@@ -154,13 +154,32 @@ Three changes, so this cannot come back:
    a fourth event is added without someone deciding.
 2. **Applying a category the session already has is skipped.** It is not a no-op in
    AVFoundation: it reconfigures the hardware and posts the notification regardless.
-3. **A tripwire.** Every loop must pass through the one function that reconfigures the
-   hardware, so that function counts changes in a rolling two-second window and logs a
-   `fault` past eight. A livelock leaves nothing behind to read; this leaves a line in
-   Console naming the file to open.
+3. ~~**A tripwire.**~~ A rate counter on category changes — removed in round four; it
+   fired on ordinary fast tapping and could not see the loop that was still there.
 
 None of this is verified on device. The Simulator has no usable audio input, so the whole
 path is gated off there — which is how this shipped twice.
+
+## Round four: the rule, enforced
+
+A code review of round three found the same loop still standing in a third place: the
+microphone's own configuration-change handler rebuilt the engine through `start()`, and
+`start()` upgrades the session. Only the "already has this category" skip stood between
+it and the freeze, and that skip compared option bits exactly, so a normalised read-back
+from iOS would have defeated it. Six smaller problems came with it. What changed:
+
+| Problem | Fix |
+|---|---|
+| Mic rebuild path re-applied the session from inside the handler | `MicAmplitudeSource.restart(after:)` takes the event. A configuration change rebuilds the graph only; it never calls `start()`. |
+| The rule was only documented | Every configuration-change handler runs inside `AudioRecovery.handleConfigurationChange`. While it runs, `AudioSession` **refuses** any upgrade or re-assertion and logs a `fault`. A downgrade is allowed — it cannot loop on its own. |
+| After a phone call, the session went back to `.playAndRecord` with nothing recording | A failed downgrade no longer leaves `intent` at `.recording`. "We still owe a downgrade" has its own flag, so `reassert` reapplies *playback*. |
+| A thrown upgrade could leave the session half-upgraded with nothing to undo it | `activateForRecording()` marks the downgrade owed when it throws. |
+| The skip compared option bits exactly and ignored the mode | `SessionConfiguration.needsApplying` checks category and mode, and trusts an option set iOS normalised if this app applied it last. Unit-tested. |
+| After a media services reset, the skip could believe a stale read-back | `AudioRecovery.sessionStateIsTrustworthy` is `false` for a reset, and `reassert(after:)` then applies the configuration in full. |
+| The tripwire fired on fast tapping, missed non-category reconfiguration, and used the wall clock | Replaced by the enforcement above, plus a per-take cap: a take that needs more than three microphone rebuilds gives up on the mic and continues in the silly voice. Counted per take, so no amount of tapping trips it. |
+| `needsFreshEngine` was `==`, so a new event silently got "no" | An exhaustive switch, and the "every event considered" test now covers all three decisions. |
+
+Still not verified on device, for the same reason as before.
 
 ## Confirming it
 

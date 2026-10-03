@@ -35,7 +35,7 @@ struct DuoRehearsalView: View {
             .background(Color.black)
         }
         .overlay(alignment: .bottom) {
-            Text("Approximate layout — real dimensions come from the device SDK")
+            Text("Two separate surfaces, one performance")
                 .font(.system(.caption2).weight(.medium))
                 .foregroundStyle(Theme.labelDim)
                 .padding(.bottom, 2)
@@ -43,14 +43,14 @@ struct DuoRehearsalView: View {
     }
 
     private var stagePanel: some View {
-        panel(label: "Outer screen · audience", symbol: "person.2.fill") {
+        panel(label: "Stage · audience", symbol: "person.2.fill") {
             // Not interactive: on real hardware the audience side is facing away.
             StageView(troupe: environment.troupe, isInteractive: false)
         }
     }
 
     private var controlsPanel: some View {
-        panel(label: "Inner screen · performer", symbol: "hand.point.up.left.fill") {
+        panel(label: "Controls · performer", symbol: "hand.point.up.left.fill") {
             ControlsView(engine: environment.engine,
                          voice: environment.voice,
                          router: environment.router,
