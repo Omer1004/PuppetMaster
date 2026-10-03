@@ -26,9 +26,11 @@ final class MainSceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.makeKeyAndVisible()
         self.window = window
 
+        #if compiler(>=6.4)
         if #available(iOS 27.0, *) {
             registerStageAccessory(on: host)
         }
+        #endif
     }
 
     /// **Beginning in iOS 27, an app only receives an external-display scene after it
@@ -44,6 +46,13 @@ final class MainSceneDelegate: UIResponder, UIWindowSceneDelegate {
     ///
     /// Written against Apple's documentation for the iOS 27.0 SDK; not yet run against a
     /// real display, like the rest of Big Screen.
+    ///
+    /// **Compiled only by an Xcode with the iOS 27 SDK.** `#available` is a runtime
+    /// check; the symbols still have to exist at compile time, and CI's Xcode 26.6
+    /// (iOS 26.5 SDK) does not have them. `compiler(>=6.4)` is the SDK switch: Xcode 27
+    /// ships Swift 6.4, Xcode 26.6 ships 6.3. A build from Xcode 26 therefore has no
+    /// Big Screen on iOS 27 devices — ship from Xcode 27.
+    #if compiler(>=6.4)
     @available(iOS 27.0, *)
     private func registerStageAccessory(on controller: UIViewController) {
         let configuration = UISceneConfiguration(name: "Stage",
@@ -52,6 +61,7 @@ final class MainSceneDelegate: UIResponder, UIWindowSceneDelegate {
         stageAccessory = controller.registerSceneAccessory(
             .externalNonInteractive(sceneConfiguration: configuration))
     }
+    #endif
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         MainActor.assumeIsolated { AppEnvironment.shared.startClock() }
